@@ -2,8 +2,8 @@ import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
 
-
-'''def check_password():
+'''
+def check_password():
     """Retourne True si l'utilisateur a entré le bon mot de passe."""
     
     def password_entered():
