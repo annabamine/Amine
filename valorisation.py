@@ -33,7 +33,8 @@ import matplotlib.pyplot as plt
 
 # Vérifier le mot de passe avant d'afficher l'app
 if not check_password():
-    st.stop()  # Arrête l'exécution si pas connecté'''
+    st.stop()  # Arrête l'exécution si pas connecté
+'''
 
 
 st.markdown("""
