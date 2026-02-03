@@ -2,40 +2,6 @@ import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
 
-'''
-def check_password():
-    """Retourne True si l'utilisateur a entré le bon mot de passe."""
-    
-    def password_entered():
-        """Vérifie si le mot de passe est correct."""
-        if st.session_state["password"] == "annab123":  # ← Changez le mot de passe
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Efface le mot de passe
-        else:
-            st.session_state["password_correct"] = False
-
-    # Si déjà connecté
-    if st.session_state.get("password_correct", False):
-        return True
-
-    # Affiche le formulaire de connexion
-    st.text_input(
-        "🔒 Mot de passe", 
-        type="password", 
-        on_change=password_entered, 
-        key="password"
-    )
-    
-    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
-        st.error("😕 Mot de passe incorrect")
-    
-    return False
-
-# Vérifier le mot de passe avant d'afficher l'app
-if not check_password():
-    st.stop()  # Arrête l'exécution si pas connecté
-'''
-
 
 st.markdown("""
 <style>
