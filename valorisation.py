@@ -41,17 +41,17 @@ st.markdown("""
 }
 .stApp * {
     color: black !important;
-    font-size: 16px !important;  /* ← augmenté */
+    font-size: 15px !important;  /* ← augmenté */
 }
 div, p, span, label, .stMarkdown, .stWrite, .stText, .stNumberInput label, .stTextInput label, .stHeader, .stAlert, .stSuccess, .stWarning, .stError {
     color: black !important;
-    font-size: 16px !important;
+    font-size: 15px !important;
 }
 div.stNumberInput input, div.stTextInput input {
     background-color: white !important;
     color: black !important;
     border: 1px solid gray !important;
-    font-size: 16px !important;  /* ← aussi pour ce qu'on tape */
+    font-size: 15px !important;  /* ← aussi pour ce qu'on tape */
 }
 header, .stAppHeader {
     background-color: #fffdf4 !important;
@@ -83,7 +83,7 @@ if ticker:
             domain = website.replace('https://', '').replace('http://', '').replace('www.', '').rstrip('/')
             logo_url = f"https://logos-api.apistemic.com/domain:{domain}"
             try:
-                st.image(logo_url, width=60)
+                st.image(logo_url, width=40)
             except:
                 st.write("Logo non disponible")
         else:
