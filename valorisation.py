@@ -8,33 +8,32 @@ st.markdown("""
 .stApp {
     background-color: #fffdf4;
 }
-.stApp * {
-    color: black !important;
-    font-size: 15px !important;
-}
-
-/* Exception pour les titres h1 et h2 */
-h1, h2 {
-    font-size: 40px !important;
-    color: #d9534f !important;
-}
 
 div, p, span, label, .stMarkdown, .stWrite, .stText, .stNumberInput label, .stTextInput label, .stHeader, .stAlert, .stSuccess, .stWarning, .stError {
     color: black !important;
     font-size: 15px !important;
 }
+
 div.stNumberInput input, div.stTextInput input {
     background-color: white !important;
     color: black !important;
     border: 1px solid gray !important;
     font-size: 15px !important;
 }
+
 header, .stAppHeader {
     background-color: #fffdf4 !important;
     color: black !important;
 }
+
+/* Titres en dernier pour qu'ils prennent le dessus */
+.stApp h1, .stApp h2 {
+    font-size: 40px !important;
+    color: #d9534f !important;
+}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 ticker = st.text_input("Entre le ticker", "AAPL")
