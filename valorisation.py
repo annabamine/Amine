@@ -70,6 +70,74 @@ if ticker:
         st.write(f"**PER (forward)** : {fper}")
         st.write(f"**EPS (trailing)** : {eps}")
 
+
+              '''# === RATIOS FINANCIERS ===
+        st.markdown("<h2 style='color: #d9534f;'>Ratios financiers</h2>", unsafe_allow_html=True)'''
+        
+        # Récupération des données financières
+        roe = infos.get("returnOnEquity")
+        roic = infos.get("returnOnAssets")  # Yahoo n'a pas toujours ROIC, ROA est similaire
+        
+        # Données des cash flows
+        try:
+            cashflow = action.cashflow
+            if not cashflow.empty:
+                # Prend les données les plus récentes (première colonne)
+                capex = cashflow.loc["Capital Expenditure"].iloc[0] if "Capital Expenditure" in cashflow.index else None
+                operating_cash_flow = cashflow.loc["Operating Cash Flow"].iloc[0] if "Operating Cash Flow" in cashflow.index else None
+                
+                # Affichage CAPEX
+                if capex is not None:
+                    capex_millions = capex / 1_000_000
+                    st.write(f"**CAPEX** : {capex_millions:,.0f} M {devise}")
+                else:
+                    st.write("**CAPEX** : Non disponible")
+                
+                # Affichage Operating Cash Flow
+                if operating_cash_flow is not None:
+                    ocf_millions = operating_cash_flow / 1_000_000
+                    st.write(f"**Operating Cash Flow** : {ocf_millions:,.0f} M {devise}")
+                else:
+                    st.write("**Operating Cash Flow** : Non disponible")
+                
+                # Ratio CAPEX / Operating Cash Flow
+                if capex is not None and operating_cash_flow is not None and operating_cash_flow != 0:
+                    ratio_capex_ocf = abs(capex) / operating_cash_flow * 100
+                    st.write(f"**CAPEX / Op Cash Flow** : {ratio_capex_ocf:.1f} %")
+                else:
+                    st.write("**CAPEX / Op Cash Flow** : Non disponible")
+            else:
+                st.write("**CAPEX** : Non disponible")
+                st.write("**Operating Cash Flow** : Non disponible")
+                st.write("**CAPEX / Op Cash Flow** : Non disponible")
+        except:
+            st.write("**CAPEX** : Non disponible")
+            st.write("**Operating Cash Flow** : Non disponible")
+            st.write("**CAPEX / Op Cash Flow** : Non disponible")
+        
+        # ROE
+        if roe is not None:
+            roe_pct = roe * 100
+            if roe_pct >= 15:
+                st.success(f"**ROE (Return on Equity)** : {roe_pct:.1f} %")
+            else:
+                st.write(f"**ROE (Return on Equity)** : {roe_pct:.1f} %")
+        else:
+            st.write("**ROE** : Non disponible")
+        
+        # ROIC (ou ROA si ROIC pas dispo)
+        if roic is not None:
+            roic_pct = roic * 100
+            if roic_pct >= 10:
+                st.success(f"**ROA (Return on Assets)** : {roic_pct:.1f} %")
+            else:
+                st.write(f"**ROA (Return on Assets)** : {roic_pct:.1f} %")
+        else:
+            st.write("**ROIC/ROA** : Non disponible")
+
+
+
+
         st.markdown("<h2 style='color: #d9534f;'>Méthode 1 - Estimation simple</h2>", unsafe_allow_html=True)
 
         
@@ -102,6 +170,8 @@ if ticker:
                 st.success(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
             else:
                 st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
+        
 
+        
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
