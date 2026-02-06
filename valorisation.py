@@ -8,33 +8,26 @@ st.markdown("""
 .stApp {
     background-color: #fffdf4;
 }
-
+.stApp * {
+    color: black !important;
+    font-size: 15px !important;  /* ← augmenté */
+}
 div, p, span, label, .stMarkdown, .stWrite, .stText, .stNumberInput label, .stTextInput label, .stHeader, .stAlert, .stSuccess, .stWarning, .stError {
     color: black !important;
     font-size: 15px !important;
 }
-
 div.stNumberInput input, div.stTextInput input {
     background-color: white !important;
     color: black !important;
     border: 1px solid gray !important;
-    font-size: 15px !important;
+    font-size: 15px !important;  /* ← aussi pour ce qu'on tape */
 }
-
 header, .stAppHeader {
     background-color: #fffdf4 !important;
     color: black !important;
 }
-
-/* Titres en dernier pour qu'ils prennent le dessus */
-.stApp h1, .stApp h2 {
-    font-size: 40px !important;
-    color: #d9534f !important;
-}
 </style>
 """, unsafe_allow_html=True)
-
-
 
 ticker = st.text_input("Entre le ticker", "AAPL")
 
@@ -71,7 +64,9 @@ if ticker:
         with st.expander("📄 Résumé de l'entreprise (Yahoo Finance)"):
             st.write(summary)
 
-        st.markdown("<h2 style='color: #d9534f; font-size: 40px;'>Ratios financiers : </h2>", unsafe_allow_html=True)
+        st.title("🔢 Ratios financiers")
+
+
         st.write(f"**Prix actuel** : {prix} {devise}")
         st.write(f"**PER (trailing)** : {per}")
         st.write(f"**PER (forward)** : {fper}")
@@ -137,7 +132,7 @@ if ticker:
 
 
 
-        st.markdown("<h2 style='color: #d9534f; font-size: 40px;'>Méthode 1 - Estimation simple</h2>", unsafe_allow_html=True)
+        st.title("📊 Méthode 1 - Estimation simple")
 
         
         cagr_eps = st.number_input("Mon CAGR estimé pour les EPS (en %)", min_value=-100.0, value=12.0)
@@ -157,7 +152,7 @@ if ticker:
 
 
 
-        st.markdown("<h2 style='color: #d9534f; font-size: 40px;'>Méthode 2 - Prix d'entrée juste</h2>", unsafe_allow_html=True)
+        st.title("💰 Méthode 2 - Prix d'entrée juste")
 
 
         rendement_attendu = st.number_input("Rendement annuel attendu (%)", value=10.0)
