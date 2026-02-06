@@ -80,6 +80,14 @@ if ticker:
                 st.write(f"**PER (trailing)** : {per}")
                 st.write(f"**PER (forward)** : {fper}")
                 st.write(f"**EPS (trailing)** : {eps}")
+                # Debt-to-Equity
+                debt_to_equity = infos.get("debtToEquity")
+                if debt_to_equity is not None:
+                   st.write(f"**Debt/Equity** : {debt_to_equity:.2f}")
+                else:
+                   st.write("**Debt/Equity** : N/A")
+
+
             
             # Colonne 2 : CAPEX, OCF, CAPEX/OCF
             with col2:
@@ -117,6 +125,15 @@ if ticker:
                     st.write("**CAPEX** : N/A")
                     st.write("**Op Cash Flow** : N/A")
                     st.write("**CAPEX/OCF** : N/A")
+                
+                # Profit Margin
+                profit_margin = infos.get("profitMargins")
+                if profit_margin is not None:
+                   profit_margin_pct = profit_margin * 100
+                   st.write(f"**Profit Margin** : {profit_margin_pct:.1f} %")
+                else:
+                   st.write("**Profit Margin** : N/A")
+
             
             # Colonne 3 : ROE, ROA
             with col3:
@@ -136,13 +153,20 @@ if ticker:
                 else:
                     st.write("**ROA** : N/A")
 
-                  # PER moyen 10 ans (ajouté ici dans la colonne 3)
-                if per != "Non dispo" and isinstance(per, (int, float)):
-                    st.write(f"**PER moy. 10 ans** : ~{per:.1f}")
-                    st.caption("⚠️ Estimation")
+                # Dividend Yield
+                dividend_yield = infos.get("dividendYield")
+                if dividend_yield is not None:
+                   div_yield_pct = dividend_yield * 100
+                   st.write(f"**Dividend Yield** : {div_yield_pct:.2f} %")
                 else:
-                    st.write("**PER moy. 10 ans** : N/A")
+                   st.write("**Dividend Yield** : N/A")
 
+                # Price-to-Book
+                price_to_book = infos.get("priceToBook")
+                if price_to_book is not None:
+                   st.write(f"**Price/Book** : {price_to_book:.2f}")
+                else:
+                   st.write("**Price/Book** : N/A")
 
 
         
