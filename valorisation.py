@@ -64,7 +64,7 @@ if ticker:
         with st.expander("📄 Résumé de l'entreprise (Yahoo Finance)"):
             st.write(summary)
 
-
+        st.markdown("<h2 style='color: #d9534f;'>Ratios financiers</h2>", unsafe_allow_html=True)
         st.write(f"**Prix actuel** : {prix} {devise}")
         st.write(f"**PER (trailing)** : {per}")
         st.write(f"**PER (forward)** : {fper}")
