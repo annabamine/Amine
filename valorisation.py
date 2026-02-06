@@ -137,7 +137,6 @@ if ticker:
                     st.write("**ROA** : N/A")
 
                   # PER moyen 10 ans (ajouté ici dans la colonne 3)
-                st.write("")  # Petit espace
                 if per != "Non dispo" and isinstance(per, (int, float)):
                     st.write(f"**PER moy. 10 ans** : ~{per:.1f}")
                     st.caption("⚠️ Estimation")
