@@ -116,20 +116,14 @@ if ticker:
         # ROE
         if roe is not None:
             roe_pct = roe * 100
-            if roe_pct >= 15:
-                st.success(f"**ROE (Return on Equity)** : {roe_pct:.1f} %")
-            else:
-                st.write(f"**ROE (Return on Equity)** : {roe_pct:.1f} %")
+            st.write(f"**ROE (Return on Equity)** : {roe_pct:.1f} %")
         else:
             st.write("**ROE** : Non disponible")
         
         # ROIC (ou ROA si ROIC pas dispo)
         if roic is not None:
             roic_pct = roic * 100
-            if roic_pct >= 10:
-                st.success(f"**ROA (Return on Assets)** : {roic_pct:.1f} %")
-            else:
-                st.write(f"**ROA (Return on Assets)** : {roic_pct:.1f} %")
+            st.write(f"**ROA (Return on Assets)** : {roic_pct:.1f} %")
         else:
             st.write("**ROIC/ROA** : Non disponible")
 
