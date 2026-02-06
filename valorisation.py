@@ -64,7 +64,7 @@ if ticker:
         with st.expander("📄 Résumé de l'entreprise (Yahoo Finance)"):
             st.write(summary)
 
-        st.markdown("<h2 style='color: #d9534f; font-size: 32px;'>Ratios financiers : </h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color: #d9534f; font-size: 40px;'>Ratios financiers : </h2>", unsafe_allow_html=True)
         st.write(f"**Prix actuel** : {prix} {devise}")
         st.write(f"**PER (trailing)** : {per}")
         st.write(f"**PER (forward)** : {fper}")
@@ -130,7 +130,7 @@ if ticker:
 
 
 
-        st.markdown("<h2 style='color: #d9534f; font-size: 32px;'>Méthode 1 - Estimation simple</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color: #d9534f; font-size: 40px;'>Méthode 1 - Estimation simple</h2>", unsafe_allow_html=True)
 
         
         cagr_eps = st.number_input("Mon CAGR estimé pour les EPS (en %)", min_value=-100.0, value=12.0)
@@ -150,7 +150,7 @@ if ticker:
 
 
 
-        st.markdown("<h2 style='color: #d9534f; font-size: 32px;'>Méthode 2 - Prix d'entrée juste</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color: #d9534f; font-size: 40px;'>Méthode 2 - Prix d'entrée juste</h2>", unsafe_allow_html=True)
 
 
         rendement_attendu = st.number_input("Rendement annuel attendu (%)", value=10.0)
