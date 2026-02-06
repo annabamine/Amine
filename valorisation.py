@@ -135,6 +135,17 @@ if ticker:
                     st.write(f"**ROA** : {roic_pct:.1f} %")
                 else:
                     st.write("**ROA** : N/A")
+
+                  # PER moyen 10 ans (ajouté ici dans la colonne 3)
+                st.write("")  # Petit espace
+                if per != "Non dispo" and isinstance(per, (int, float)):
+                    st.write(f"**PER moy. 10 ans** : ~{per:.1f}")
+                    st.caption("⚠️ Estimation")
+                else:
+                    st.write("**PER moy. 10 ans** : N/A")
+
+
+
         
         # ONGLET 2 : MÉTHODE 1
         with tab2:
