@@ -64,76 +64,75 @@ if ticker:
         with st.expander("📄 Résumé de l'entreprise (Yahoo Finance)"):
             st.write(summary)
 
+        # Prix AVANT le titre
+        st.write(f"**Prix actuel** : {prix} {devise}")
+        
+        # Titre
         st.title("🔢 Ratios financiers")
         
-        # Créer 2 colonnes
-        col1, col2 = st.columns(2)
+        # 3 colonnes pour les ratios
+        col1, col2, col3 = st.columns(3)
         
-        # Colonne 1 : Prix et PER
+        # Colonne 1 : PER, Forward PER, EPS
         with col1:
-            st.write(f"**Prix actuel** : {prix} {devise}")
             st.write(f"**PER (trailing)** : {per}")
             st.write(f"**PER (forward)** : {fper}")
             st.write(f"**EPS (trailing)** : {eps}")
         
-        # Colonne 2 : ROE et ROA
+        # Colonne 2 : CAPEX, OCF, CAPEX/OCF
         with col2:
-            # ROE
-            roe = infos.get("returnOnEquity")
-            if roe is not None:
-                roe_pct = roe * 100
-                st.write(f"**ROE (Return on Equity)** : {roe_pct:.1f} %")
-            else:
-                st.write("**ROE** : Non disponible")
-            
-            # ROIC (ou ROA si ROIC pas dispo)
-            roic = infos.get("returnOnAssets")
-            if roic is not None:
-                roic_pct = roic * 100
-                st.write(f"**ROA (Return on Assets)** : {roic_pct:.1f} %")
-            else:
-                st.write("**ROIC/ROA** : Non disponible")
-        
-        # Section CAPEX (pleine largeur en dessous)
-        st.write("---")  # Ligne de séparation
-        
-        # Données des cash flows
-        try:
-            cashflow = action.cashflow
-            if not cashflow.empty:
-                capex = cashflow.loc["Capital Expenditure"].iloc[0] if "Capital Expenditure" in cashflow.index else None
-                operating_cash_flow = cashflow.loc["Operating Cash Flow"].iloc[0] if "Operating Cash Flow" in cashflow.index else None
-                
-                # 2 colonnes pour CAPEX
-                col3, col4 = st.columns(2)
-                
-                with col3:
-                    # Affichage CAPEX
+            try:
+                cashflow = action.cashflow
+                if not cashflow.empty:
+                    capex = cashflow.loc["Capital Expenditure"].iloc[0] if "Capital Expenditure" in cashflow.index else None
+                    operating_cash_flow = cashflow.loc["Operating Cash Flow"].iloc[0] if "Operating Cash Flow" in cashflow.index else None
+                    
+                    # CAPEX
                     if capex is not None:
                         capex_millions = capex / 1_000_000
                         st.write(f"**CAPEX** : {capex_millions:,.0f} M {devise}")
                     else:
-                        st.write("**CAPEX** : Non disponible")
+                        st.write("**CAPEX** : N/A")
                     
-                    # Affichage Operating Cash Flow
+                    # Operating Cash Flow
                     if operating_cash_flow is not None:
                         ocf_millions = operating_cash_flow / 1_000_000
-                        st.write(f"**Operating Cash Flow** : {ocf_millions:,.0f} M {devise}")
+                        st.write(f"**Op Cash Flow** : {ocf_millions:,.0f} M {devise}")
                     else:
-                        st.write("**Operating Cash Flow** : Non disponible")
-                
-                with col4:
-                    # Ratio CAPEX / Operating Cash Flow
+                        st.write("**Op Cash Flow** : N/A")
+                    
+                    # Ratio CAPEX/OCF
                     if capex is not None and operating_cash_flow is not None and operating_cash_flow != 0:
                         ratio_capex_ocf = abs(capex) / operating_cash_flow * 100
-                        st.write(f"**CAPEX / Op Cash Flow** : {ratio_capex_ocf:.1f} %")
+                        st.write(f"**CAPEX/OCF** : {ratio_capex_ocf:.1f} %")
                     else:
-                        st.write("**CAPEX / Op Cash Flow** : Non disponible")
+                        st.write("**CAPEX/OCF** : N/A")
+                else:
+                    st.write("**CAPEX** : N/A")
+                    st.write("**Op Cash Flow** : N/A")
+                    st.write("**CAPEX/OCF** : N/A")
+            except:
+                st.write("**CAPEX** : N/A")
+                st.write("**Op Cash Flow** : N/A")
+                st.write("**CAPEX/OCF** : N/A")
+        
+        # Colonne 3 : ROE, ROA
+        with col3:
+            # ROE
+            roe = infos.get("returnOnEquity")
+            if roe is not None:
+                roe_pct = roe * 100
+                st.write(f"**ROE** : {roe_pct:.1f} %")
             else:
-                st.write("**CAPEX** : Non disponible")
-                st.write("**Operating Cash Flow** : Non disponible")
-        except:
-            st.write("**Données cash flow** : Non disponibles")
+                st.write("**ROE** : N/A")
+            
+            # ROA
+            roic = infos.get("returnOnAssets")
+            if roic is not None:
+                roic_pct = roic * 100
+                st.write(f"**ROA** : {roic_pct:.1f} %")
+            else:
+                st.write("**ROA** : N/A")
 
 
 
