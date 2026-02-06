@@ -156,7 +156,6 @@ if ticker:
                 # Dividend Yield
                 dividend_yield = infos.get("dividendYield")
                 if dividend_yield is not None:
-                   div_yield_pct = dividend_yield * 100
                    st.write(f"**Dividend Yield** : {div_yield_pct:.2f} %")
                 else:
                    st.write("**Dividend Yield** : N/A")
