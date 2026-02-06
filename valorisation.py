@@ -71,9 +71,7 @@ if ticker:
         st.write(f"**EPS (trailing)** : {eps}")
 
 
-              '''# === RATIOS FINANCIERS ===
-        st.markdown("<h2 style='color: #d9534f;'>Ratios financiers</h2>", unsafe_allow_html=True)'''
-        
+    
         # Récupération des données financières
         roe = infos.get("returnOnEquity")
         roic = infos.get("returnOnAssets")  # Yahoo n'a pas toujours ROIC, ROA est similaire
