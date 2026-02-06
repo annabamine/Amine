@@ -83,7 +83,7 @@ if ticker:
                 # Debt-to-Equity
                 debt_to_equity = infos.get("debtToEquity")
                 if debt_to_equity is not None:
-                   st.write(f"**Debt/Equity** : {debt_to_equity:.2f}")
+                   st.write(f"**Debt/Equity** : {debt_to_equity:.2f}%")
                 else:
                    st.write("**Debt/Equity** : N/A")
 
