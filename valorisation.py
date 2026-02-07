@@ -64,6 +64,14 @@ if ticker:
 
         # Prix AVANT les onglets
         st.write(f"**Prix actuel** : {prix} {devise}")
+
+        # Capitalisation boursière
+        market_cap = infos.get("marketCap")
+        if market_cap is not None:
+           market_cap_billions = market_cap / 1_000_000_000
+           st.write(f"**Market Cap** : {market_cap_billions:,.2f} Mds {devise}")
+        else:
+           st.write("**Market Cap** : N/A")
         
         # Créer les onglets
         tab1, tab2, tab3 = st.tabs(["🔢 Ratios", "📊 Méthode 1", "💰 Méthode 2"])
@@ -87,6 +95,23 @@ if ticker:
                 else:
                    st.write("**Debt/Equity** : N/A")
 
+            # Price-to-Free Cash Flow
+            try:
+                cashflow = action.cashflow
+                if not cashflow.empty:
+                   free_cash_flow = cashflow.loc["Free Cash Flow"].iloc[0] if "Free Cash Flow" in cashflow.index else None
+                   market_cap = infos.get("marketCap")
+        
+                   if free_cash_flow is not None and market_cap is not None and free_cash_flow > 0:
+                      price_to_fcf = market_cap / free_cash_flow
+                      st.write(f"**Price/FCF** : {price_to_fcf:.2f}")
+                  else:
+                      st.write("**Price/FCF** : N/A")
+                else:
+                      st.write("**Price/FCF** : N/A")
+            except:
+                  st.write("**Price/FCF** : N/A")
+                
 
             
             # Colonne 2 : CAPEX, OCF, CAPEX/OCF
@@ -134,6 +159,24 @@ if ticker:
                 else:
                    st.write("**Profit Margin** : N/A")
 
+
+
+                # Free Cash Flow
+                try:
+                cashflow = action.cashflow
+                if not cashflow.empty:
+                   free_cash_flow = cashflow.loc["Free Cash Flow"].iloc[0] if "Free Cash Flow" in cashflow.index else None
+        
+                   if free_cash_flow is not None:
+                      fcf_millions = free_cash_flow / 1_000_000
+                      st.write(f"**Free Cash Flow** : {fcf_millions:,.0f} M {devise}")
+                   else:
+                      st.write("**Free Cash Flow** : N/A")
+                else:
+                    st.write("**Free Cash Flow** : N/A")
+                except:
+                    st.write("**Free Cash Flow** : N/A")
+
             
             # Colonne 3 : ROE, ROA
             with col3:
@@ -166,6 +209,26 @@ if ticker:
                    st.write(f"**Price/Book** : {price_to_book:.2f}")
                 else:
                    st.write("**Price/Book** : N/A")
+
+
+                # Debt-to-Free Cash Flow
+                try:
+                    cashflow = action.cashflow
+                    balance_sheet = action.balance_sheet
+     
+                    if not cashflow.empty and not balance_sheet.empty:
+                       free_cash_flow = cashflow.loc["Free Cash Flow"].iloc[0] if "Free Cash Flow" in cashflow.index else None
+                       total_debt = balance_sheet.loc["Total Debt"].iloc[0] if "Total Debt" in balance_sheet.index else None
+        
+                       if free_cash_flow is not None and total_debt is not None and free_cash_flow > 0:
+                          debt_to_fcf = total_debt / free_cash_flow
+                          st.write(f"**Debt/FCF** : {debt_to_fcf:.2f} ans")
+                       else:
+                          st.write("**Debt/FCF** : N/A")
+                    else:
+                       st.write("**Debt/FCF** : N/A")
+                except:
+                     st.write("**Debt/FCF** : N/A")
 
 
         
