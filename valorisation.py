@@ -31,34 +31,39 @@ header, .stAppHeader {
 """, unsafe_allow_html=True)
 
 
-# Barre de recherche intelligente
-search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple")
+# --- RECHERCHE INTELLIGENTE ---
+# On remplace l'ancien ticker = st.text_input(...) par ce bloc :
 
-# Liste déroulante de suggestions
-if search_query:
-    try:
-        # Recherche Yahoo Finance
-        search_results = yf.Search(search_query, max_results=5)
-        quotes = search_results.quotes
+query = st.text_input("Recherche une entreprise (ex: Apple, Honest, LVMH...)", "Apple")
+
+ticker = "" # On initialise le ticker vide
+
+if query:
+    # On cherche les correspondances via yfinance
+    search_results = yf.Search(query, max_results=5).tickers
+    
+    if search_results:
+        # On crée une liste propre pour le menu déroulant
+        options = []
+        for res in search_results:
+            # On affiche le Ticker - Nom - Bourse (ex: AAPL - Apple Inc. - NASDAQ)
+            label = f"{res['symbol']} - {res['shortname']} ({res['exchange']})"
+            options.append(label)
         
-        if quotes:
-            # Créer les options pour le menu déroulant
-            options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
-            
-            # Menu déroulant
-            selected = st.selectbox("Sélectionnez l'entreprise :", options)
-            
-            # Extraire le ticker de la sélection (partie avant le " - ")
-            ticker = selected.split(" - ")[0]
-        else:
-            st.warning(f"Aucun résultat pour '{search_query}'")
-            ticker = None
-    except:
-        # Si la recherche échoue, essayer directement le ticker
-        ticker = search_query.upper()
-else:
-    ticker = None
+        # Menu déroulant pour choisir le bon ticker
+        selection = st.selectbox("Sélectionne l'entreprise exacte :", options)
+        
+        # On extrait le ticker de la sélection (la partie avant le premier espace)
+        ticker = selection.split(" - ")[0]
+    else:
+        st.error("Aucun résultat trouvé. Essaie avec un nom plus précis ou le ticker direct.")
 
+# --- FIN DU BLOC RECHERCHE ---
+
+if ticker:
+    try:
+        action = yf.Ticker(ticker)
+        # ... le reste de ton code ne change pas ...
 
 if ticker:
     try:
