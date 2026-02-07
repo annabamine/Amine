@@ -75,7 +75,7 @@ if ticker:
 
 
         def format_valeur(valeur, devise):
-            if valeur is None: return "N/A"
+            if valeur is None or valeur == "N/A": return "N/A"
             abs_val = abs(valeur)
             if abs_val >= 1_000_000_000:
                return f"{valeur / 1_000_000_000:,.2f} Mds {devise}"
@@ -105,79 +105,54 @@ if ticker:
                 else:
                     st.write("**Debt/Equity** : N/A")
 
-                # Price-to-Free Cash Flow
+                # Price-to-Free Cash Flow (TTM)
                 try:
-                    cashflow = action.cashflow
-                    if not cashflow.empty:
-                        free_cash_flow = cashflow.loc["Free Cash Flow"].iloc[0] if "Free Cash Flow" in cashflow.index else None
-                        market_cap = infos.get("marketCap")
-                        
-                        if free_cash_flow is not None and market_cap is not None and free_cash_flow > 0:
-                            price_to_fcf = market_cap / free_cash_flow
-                            st.write(f"**Price/FCF** : {price_to_fcf:.2f}")
-                        else:
-                            st.write("**Price/FCF** : N/A")
+                    fcf_ttm = infos.get("freeCashflow")
+                    if not fcf_ttm:
+                        fcf_ttm = action.cashflow.loc["Free Cash Flow"].iloc[0]
+                    
+                    if fcf_ttm and market_cap and fcf_ttm > 0:
+                        price_to_fcf = market_cap / fcf_ttm
+                        st.write(f"**Price/FCF** : {price_to_fcf:.2f}")
                     else:
                         st.write("**Price/FCF** : N/A")
                 except:
                     st.write("**Price/FCF** : N/A")
             
-            # Colonne 2 : CAPEX, OCF, CAPEX/OCF
+            # Colonne 2 : CAPEX, OCF, CAPEX/OCF (TTM)
             with col2:
                 try:
-                    cashflow = action.cashflow
-                    if not cashflow.empty:
-                        capex = cashflow.loc["Capital Expenditure"].iloc[0] if "Capital Expenditure" in cashflow.index else None
-                        operating_cash_flow = cashflow.loc["Operating Cash Flow"].iloc[0] if "Operating Cash Flow" in cashflow.index else None
-                        
-                        # CAPEX
-                        if capex is not None:
-                            st.write(f"**CAPEX** : {format_valeur(abs(capex), devise)}")
-                        else:
-                            st.write("**CAPEX** : N/A")
-                        
-                        # Operating Cash Flow
-                        if operating_cash_flow is not None:
-                            st.write(f"**Op Cash Flow** : {format_valeur(operating_cash_flow, devise)}")
-                        else:
-                            st.write("**Op Cash Flow** : N/A")
-                        
-                        # Ratio CAPEX/OCF
-                        if capex is not None and operating_cash_flow is not None and operating_cash_flow != 0:
-                            ratio_capex_ocf = abs(capex) / operating_cash_flow * 100
-                            st.write(f"**CAPEX/OCF** : {ratio_capex_ocf:.1f} %")
-                        else:
-                            st.write("**CAPEX/OCF** : N/A")
+                    ocf_ttm = infos.get("operatingCashflow")
+                    fcf_ttm = infos.get("freeCashflow")
+                    
+                    if ocf_ttm and fcf_ttm:
+                        capex_ttm = fcf_ttm - ocf_ttm
                     else:
-                        st.write("**CAPEX** : N/A")
-                        st.write("**Op Cash Flow** : N/A")
+                        cashflow = action.cashflow
+                        capex_ttm = cashflow.loc["Capital Expenditure"].iloc[0]
+                        ocf_ttm = cashflow.loc["Operating Cash Flow"].iloc[0]
+                        fcf_ttm = cashflow.loc["Free Cash Flow"].iloc[0]
+
+                    st.write(f"**CAPEX** : {format_valeur(abs(capex_ttm), devise)}")
+                    st.write(f"**Op Cash Flow** : {format_valeur(ocf_ttm, devise)}")
+                    
+                    if ocf_ttm and ocf_ttm != 0:
+                        ratio_capex_ocf = abs(capex_ttm) / ocf_ttm * 100
+                        st.write(f"**CAPEX/OCF** : {ratio_capex_ocf:.1f} %")
+                    else:
                         st.write("**CAPEX/OCF** : N/A")
+                        
+                    profit_margin = infos.get("profitMargins")
+                    if profit_margin is not None:
+                        st.write(f"**Profit Margin** : {profit_margin * 100:.1f} %")
+                    else:
+                        st.write("**Profit Margin** : N/A")
+
+                    st.write(f"**Free Cash Flow** : {format_valeur(fcf_ttm, devise)}")
                 except:
                     st.write("**CAPEX** : N/A")
                     st.write("**Op Cash Flow** : N/A")
                     st.write("**CAPEX/OCF** : N/A")
-                
-                # Profit Margin
-                profit_margin = infos.get("profitMargins")
-                if profit_margin is not None:
-                    profit_margin_pct = profit_margin * 100
-                    st.write(f"**Profit Margin** : {profit_margin_pct:.1f} %")
-                else:
-                    st.write("**Profit Margin** : N/A")
-
-                # Free Cash Flow
-                try:
-                    cashflow = action.cashflow
-                    if not cashflow.empty:
-                        free_cash_flow = cashflow.loc["Free Cash Flow"].iloc[0] if "Free Cash Flow" in cashflow.index else None
-                        
-                        if free_cash_flow is not None:
-                            st.write(f"**Free Cash Flow** : {format_valeur(free_cash_flow, devise)}")
-                        else:
-                            st.write("**Free Cash Flow** : N/A")
-                    else:
-                        st.write("**Free Cash Flow** : N/A")
-                except:
                     st.write("**Free Cash Flow** : N/A")
             
             # Colonne 3 : ROE, ROA
@@ -212,20 +187,14 @@ if ticker:
                 else:
                     st.write("**Price/Book** : N/A")
 
-                # Debt-to-Free Cash Flow
+                # Debt-to-Free Cash Flow (TTM)
                 try:
-                    cashflow = action.cashflow
-                    balance_sheet = action.balance_sheet
+                    total_debt = infos.get("totalDebt")
+                    fcf_ttm = infos.get("freeCashflow") or action.cashflow.loc["Free Cash Flow"].iloc[0]
                     
-                    if not cashflow.empty and not balance_sheet.empty:
-                        free_cash_flow = cashflow.loc["Free Cash Flow"].iloc[0] if "Free Cash Flow" in cashflow.index else None
-                        total_debt = balance_sheet.loc["Total Debt"].iloc[0] if "Total Debt" in balance_sheet.index else None
-                        
-                        if free_cash_flow is not None and total_debt is not None and free_cash_flow > 0:
-                            debt_to_fcf = total_debt / free_cash_flow
-                            st.write(f"**Debt/FCF** : {debt_to_fcf:.2f} ans")
-                        else:
-                            st.write("**Debt/FCF** : N/A")
+                    if fcf_ttm and total_debt and fcf_ttm > 0:
+                        debt_to_fcf = total_debt / fcf_ttm
+                        st.write(f"**Debt/FCF** : {debt_to_fcf:.2f} ans")
                     else:
                         st.write("**Debt/FCF** : N/A")
                 except:
@@ -233,10 +202,7 @@ if ticker:
 
                 # --- Évolution du nombre d'actions sur 5 ans (Bloc robuste) ---
                 try:
-                    # On récupère les bilans annuels (qui remontent sur 4 ou 5 ans)
                     bs = action.balance_sheet
-                    
-                    # Liste de clés potentielles utilisées par Yahoo pour le nombre d'actions
                     keys_to_check = ["Ordinary Shares Number", "Share Issued", "Total Common Shares Outstanding"]
                     shares_series = None
                     
@@ -247,9 +213,8 @@ if ticker:
                             
                     if shares_series is not None and len(shares_series) >= 2:
                         shares_series = shares_series.dropna()
-                        
-                        shares_recent = shares_series.iloc[0] # Plus récente
-                        shares_old = shares_series.iloc[-1]   # Plus ancienne
+                        shares_recent = shares_series.iloc[0] 
+                        shares_old = shares_series.iloc[-1]
                         
                         if shares_old > 0:
                             shares_change = ((shares_recent - shares_old) / shares_old) * 100
