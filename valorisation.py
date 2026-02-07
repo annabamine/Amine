@@ -309,31 +309,29 @@ if ticker:
         with tab4:
             st.title(f"📰 Dernières actualités : {company_name}")
             
-            # Construction de l'URL du flux RSS Yahoo Finance pour le ticker
-            rss_url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
-            feed = feedparser.parse(rss_url)
-            
-            if feed.entries:
-                for entry in feed.entries[:10]:
-                    with st.container():
-                        # Titre de l'article
-                        st.subheader(entry.title)
-                        
-                        # Source et Date (Yahoo RSS met souvent la source dans le titre ou en fin de description)
-                        st.write(f"📅 Publié le : {entry.published}")
-                        
-                        # Lien vers l'article original
-                        st.markdown(f'🔗 <a href="{entry.link}" target="_blank" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
-                        
-                        st.divider()
-            else:
-                st.info(f"Aucune actualité trouvée via le flux RSS pour {ticker}. Il est possible que le ticker soit trop récent ou très peu suivi.")
-            
+            try:
+                # Construction de l'URL du flux RSS Yahoo Finance pour le ticker
+                rss_url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
+                feed = feedparser.parse(rss_url)
+                
+                if feed.entries:
+                    for entry in feed.entries[:10]:
+                        with st.container():
+                            # Titre de l'article
+                            st.subheader(entry.title)
+                            
+                            # Source et Date (Yahoo RSS met souvent la source dans le titre ou en fin de description)
+                            st.write(f"📅 Publié le : {entry.published}")
+                            
+                            # Lien vers l'article original
+                            st.markdown(f'🔗 <a href="{entry.link}" target="_blank" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
+                            
+                            st.divider()
+                else:
+                    st.info(f"Aucune actualité trouvée via le flux RSS pour {ticker}. Il est possible que le ticker soit trop récent ou très peu suivi.")
+                
             except Exception as e:
                 st.error(f"Erreur technique lors de la récupération des news : {e}")
-
-
-
 
         
     except Exception as e:
