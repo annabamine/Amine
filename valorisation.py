@@ -132,7 +132,7 @@ if ticker:
                         
                         # CAPEX
                         if capex is not None:
-                            st.write(f"**CAPEX** : format_valeur(abs(capex), devise)}")
+                            st.write(f"**CAPEX** : {format_valeur(abs(capex), devise)}")
                         else:
                             st.write("**CAPEX** : N/A")
                         
