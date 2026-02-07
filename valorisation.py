@@ -30,7 +30,35 @@ header, .stAppHeader {
 </style>
 """, unsafe_allow_html=True)
 
-ticker = st.text_input("Entre le ticker", "AAPL")
+
+# Barre de recherche intelligente
+search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple")
+
+# Liste déroulante de suggestions
+if search_query:
+    try:
+        # Recherche Yahoo Finance
+        search_results = yf.Search(search_query, max_results=5)
+        quotes = search_results.quotes
+        
+        if quotes:
+            # Créer les options pour le menu déroulant
+            options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
+            
+            # Menu déroulant
+            selected = st.selectbox("Sélectionnez l'entreprise :", options)
+            
+            # Extraire le ticker de la sélection (partie avant le " - ")
+            ticker = selected.split(" - ")[0]
+        else:
+            st.warning(f"Aucun résultat pour '{search_query}'")
+            ticker = None
+    except:
+        # Si la recherche échoue, essayer directement le ticker
+        ticker = search_query.upper()
+else:
+    ticker = None
+
 
 if ticker:
     try:
