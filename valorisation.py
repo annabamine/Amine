@@ -225,35 +225,35 @@ if ticker:
                 except:
                     st.write("**Debt/FCF** : N/A")
 
-                # Évolution du nombre d'actions sur 5 ans
+                # --- Évolution du nombre d'actions sur 5 ans (Bloc robuste) ---
                 try:
-                    # Récupérer les bilans annuels
-                    balance_sheet = action.balance_sheet
+                    # On récupère les bilans annuels (qui remontent sur 4 ou 5 ans)
+                    bs = action.balance_sheet
                     
-                    if not balance_sheet.empty and "Share Issued" in balance_sheet.index:
-                        shares_data = balance_sheet.loc["Share Issued"]
-                        
-                        # Vérifier qu'on a au moins 2 points de données
-                        if len(shares_data) >= 2:
-                            # Prendre la valeur la plus récente (première colonne) et la plus ancienne
-                            shares_recent = shares_data.iloc[0]
-                            shares_old = shares_data.iloc[-1]
+                    # Liste de clés potentielles utilisées par Yahoo pour le nombre d'actions
+                    keys_to_check = ["Ordinary Shares Number", "Share Issued", "Total Common Shares Outstanding"]
+                    shares_series = None
+                    
+                    for key in keys_to_check:
+                        if key in bs.index:
+                            shares_series = bs.loc[key]
+                            break
                             
-                            if shares_old > 0:
-                                shares_change = ((shares_recent - shares_old) / shares_old) * 100
-                                
-                                if shares_change > 0:
-                                    st.write(f"**Actions (évol.)** : +{shares_change:.1f} % 📈")
-                                else:
-                                    st.write(f"**Actions (évol.)** : {shares_change:.1f} % 📉")
-                            else:
-                                st.write("**Actions (évol.)** : N/A")
+                    if shares_series is not None and len(shares_series) >= 2:
+                        shares_series = shares_series.dropna()
+                        
+                        shares_recent = shares_series.iloc[0] # Plus récente
+                        shares_old = shares_series.iloc[-1]   # Plus ancienne
+                        
+                        if shares_old > 0:
+                            shares_change = ((shares_recent - shares_old) / shares_old) * 100
+                            emoji = "📈" if shares_change > 0 else "📉"
+                            st.write(f"**Actions (évol.)** : {shares_change:+.1f} % {emoji}")
                         else:
                             st.write("**Actions (évol.)** : N/A")
                     else:
-                        # Plan B : utiliser sharesOutstanding de infos (données actuelles seulement)
                         st.write("**Actions (évol.)** : N/A")
-                except:
+                except Exception:
                     st.write("**Actions (évol.)** : N/A")
         
         # ONGLET 2 : MÉTHODE 1
