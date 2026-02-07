@@ -72,6 +72,15 @@ if ticker:
             st.write(f"**Market Cap** : {market_cap_billions:,.2f} Mds {devise}")
         else:
             st.write("**Market Cap** : N/A")
+
+
+        def format_valeur(valeur, devise):
+            if valeur is None: return "N/A"
+            abs_val = abs(valeur)
+            if abs_val >= 1_000_000_000:
+               return f"{valeur / 1_000_000_000:,.2f} Mds {devise}"
+            else:
+               return f"{valeur / 1_000_000:,.0f} M {devise}"
         
         # Créer les onglets
         tab1, tab2, tab3 = st.tabs(["🔢 Ratios", "📊 Méthode 1", "💰 Méthode 2"])
@@ -123,15 +132,13 @@ if ticker:
                         
                         # CAPEX
                         if capex is not None:
-                            capex_billions = capex / 1_000_000_000
-                            st.write(f"**CAPEX** : {capex_billions:,.2f} Mds {devise}")
+                            st.write(f"**CAPEX** : format_valeur(abs(capex), devise)}")
                         else:
                             st.write("**CAPEX** : N/A")
                         
                         # Operating Cash Flow
                         if operating_cash_flow is not None:
-                            ocf_billions = operating_cash_flow / 1_000_000_000
-                            st.write(f"**Op Cash Flow** : {ocf_billions:,.2f} Mds {devise}")
+                            st.write(f"**Op Cash Flow** : {format_valeur(operating_cash_flow, devise)}")
                         else:
                             st.write("**Op Cash Flow** : N/A")
                         
@@ -165,8 +172,7 @@ if ticker:
                         free_cash_flow = cashflow.loc["Free Cash Flow"].iloc[0] if "Free Cash Flow" in cashflow.index else None
                         
                         if free_cash_flow is not None:
-                            fcf_billions = free_cash_flow / 1_000_000_000
-                            st.write(f"**Free Cash Flow** : {fcf_billions:,.2f} Mds {devise}")
+                            st.write(f"**Free Cash Flow** : {format_valeur(free_cash_flow, devise)}")
                         else:
                             st.write("**Free Cash Flow** : N/A")
                     else:
