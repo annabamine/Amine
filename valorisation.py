@@ -27,25 +27,6 @@ header, .stAppHeader {
     background-color: #fffdf4 !important;
     color: black !important;
 }
-
-/* STYLE DU MENU DÉROULANT */
-div[data-baseweb="select"] > div {
-    background-color: #ffffff !important;  /* Fond blanc */
-    border: 2px solid #d9534f !important;  /* Bordure rouge */
-}
-
-div[data-baseweb="select"] > div:hover {
-    border-color: #c9302c !important;      /* Bordure plus foncée au survol */
-}
-
-/* Options dans le menu déroulant */
-ul[role="listbox"] {
-    background-color: #ffffff !important;  /* Fond des options */
-}
-
-ul[role="listbox"] li:hover {
-    background-color: #ffe6e6 !important;  /* Rouge clair au survol */
-}
 </style>
 """, unsafe_allow_html=True)
 
