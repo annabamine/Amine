@@ -83,7 +83,7 @@ if ticker:
                return f"{valeur / 1_000_000:,.2f} M {devise}"
         
         # Créer les onglets
-        tab1, tab2, tab3 = st.tabs(["🔢 Ratios", "📊 Méthode 1", "💰 Méthode 2"])
+        tab1, tab2, tab3, tab4 = st.tabs(["🔢 Ratios", "📊 Méthode 1", "💰 Méthode 2", "📰 Actualités"])
         
         # ONGLET 1 : RATIOS
         with tab1:
@@ -302,6 +302,35 @@ if ticker:
                     st.success(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
                 else:
                     st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
+
+
+        # ONGLET 4 : ACTUALITÉS
+        with tab4:
+            st.title(f"📰 Dernières actualités : {company_name}")
+            
+            news = action.news
+            if news:
+                for article in news[:10]:  # On affiche les 10 dernières news
+                    # Création d'un container pour chaque news
+                    with st.container():
+                        col_text, col_img = st.columns([4, 1])
+                        
+                        with col_text:
+                            st.subheader(article.get('title'))
+                            # Affichage de la source et de la date (si dispo)
+                            source = article.get('publisher', 'Source inconnue')
+                            st.write(f"🏠 *{source}*")
+                            st.markdown(f"[Lire l'article complet]({article.get('link')})")
+                        
+                        with col_img:
+                            # Affichage de la miniature si elle existe
+                            thumbnail = article.get('thumbnail', {}).get('resolutions', [])
+                            if thumbnail:
+                                st.image(thumbnail[0].get('url'), use_container_width=True)
+                        
+                        st.divider() # Ligne de séparation entre les articles
+            else:
+                st.write("Aucune actualité récente trouvée pour ce ticker.")
         
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
