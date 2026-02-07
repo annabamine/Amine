@@ -306,40 +306,46 @@ if ticker:
 
         # ONGLET 4 : ACTUALITÉS
         with tab4:
-            st.title(f"📰 Dernières actualités : {company_name}")
+            st.title("📰 Actualités récentes")
             
-            news = action.news
-            if news:
-                for article in news[:10]:
-                    with st.container():
-                        col_text, col_img = st.columns([4, 1])
+            try:
+                # Récupérer les actualités depuis Yahoo Finance
+                news = action.news
+                
+                if news and len(news) > 0:
+                    # Afficher les 10 dernières actualités
+                    for i, article in enumerate(news[:10]):
+                        # Titre
+                        title = article.get('title', 'Sans titre')
                         
-                        # Récupération sécurisée du titre et du lien
-                        title = article.get('title', 'Titre non disponible')
-                        link = article.get('link')
+                        # Lien
+                        link = article.get('link', '')
                         
-                        # Récupération sécurisée de la source
-                        # Yahoo peut utiliser 'publisher' ou 'source'
-                        source = article.get('publisher') or article.get('source') or "Yahoo Finance"
+                        # Source
+                        publisher = article.get('publisher', 'Source inconnue')
                         
-                        with col_text:
-                            st.subheader(title)
-                            st.write(f"🏠 *Source : {source}*")
-                            
-                            # On vérifie que le lien existe avant d'afficher le bouton
-                            if link:
-                                st.markdown(f'<a href="{link}" target="_blank">Lire l\'article complet</a>', unsafe_allow_html=True)
-                            else:
-                                st.write("Lien non disponible")
+                        # Date (timestamp Unix à convertir)
+                        timestamp = article.get('providerPublishTime', 0)
+                        if timestamp:
+                            from datetime import datetime
+                            date = datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y %H:%M')
+                        else:
+                            date = "Date inconnue"
                         
-                        with col_img:
-                            thumbnail = article.get('thumbnail', {}).get('resolutions', [])
-                            if thumbnail:
-                                st.image(thumbnail[0].get('url'), use_container_width=True)
+                        # Affichage
+                        st.markdown(f"### [{title}]({link})")
+                        st.caption(f"📅 {date} • 📰 {publisher}")
                         
-                        st.divider()
-            else:
-                st.write("Aucune actualité récente trouvée.")
+                        # Séparateur
+                        if i < len(news[:10]) - 1:
+                            st.write("---")
+                else:
+                    st.info("Aucune actualité disponible pour ce ticker")
+                    
+            except Exception as e:
+                st.error(f"Impossible de récupérer les actualités : {e}")
+
+
         
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
