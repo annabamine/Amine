@@ -68,11 +68,6 @@ if query:
 if ticker:
     try:
         action = yf.Ticker(ticker)
-        # ... le reste de ton code ne change pas ...
-
-if ticker:
-    try:
-        action = yf.Ticker(ticker)
         infos = action.info
         devise = infos.get("currencySymbol") or infos.get("currency")
         prix = infos.get("currentPrice", "Non dispo")
