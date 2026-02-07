@@ -64,7 +64,6 @@ if query:
         ticker = query.upper()
 # --- FIN DU BLOC RECHERCHE ---
 
-
 if ticker:
     try:
         action = yf.Ticker(ticker)
