@@ -260,19 +260,30 @@ if ticker:
         with tab2:
             st.title("📊 Méthode 1 - Estimation simple")
             
+            # Nouvelle donnée d'entrée : l'horizon
+            horizon_m1 = st.number_input("Horizon d'investissement (années)", min_value=1, max_value=30, value=5, step=1)
+            
             cagr_eps = st.number_input("Mon CAGR estimé pour les EPS (en %)", min_value=-100.0, value=12.0)
+            
             eps_actuel = infos.get("trailingEps", 0.01)
-            eps_futur = eps_actuel * ((1 + cagr_eps / 100) ** 5)
-            per_estime = st.number_input("PER que j'estime dans 5 ans", min_value=5.0, value=20.0)
+            
+            # Calcul des EPS futurs basé sur l'horizon choisi
+            eps_futur = eps_actuel * ((1 + cagr_eps / 100) ** horizon_m1)
+            
+            per_estime = st.number_input(f"PER que j'estime dans {horizon_m1} ans", min_value=5.0, value=20.0)
+            
+            # Calcul du prix cible
             prix_cible = eps_futur * per_estime
-            st.write(f"**Prix cible dans 5 ans** : {prix_cible:.2f} {devise}")
+            st.write(f"**Prix cible dans {horizon_m1} ans** : {prix_cible:.2f} {devise}")
 
             if isinstance(prix, (float, int)) and prix_cible > 0 and prix > 0:
-                cagr_prix = ((prix_cible / prix) ** (1/5) - 1) * 100
+                # Calcul du CAGR du prix sur l'horizon choisi
+                cagr_prix = ((prix_cible / prix) ** (1/horizon_m1) - 1) * 100
+                
                 if cagr_prix >= 10:
-                    st.success(f"**CAGR au prix actuel (5 ans)** : {cagr_prix:.1f} %")
+                    st.success(f"**CAGR au prix actuel ({horizon_m1} ans)** : {cagr_prix:.1f} %")
                 else:
-                    st.error(f"**CAGR au prix actuel (5 ans)** : {cagr_prix:.1f} %")
+                    st.error(f"**CAGR au prix actuel ({horizon_m1} ans)** : {cagr_prix:.1f} %")
         
         # ONGLET 3 : MÉTHODE 2
         with tab3:
