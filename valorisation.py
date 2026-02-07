@@ -31,38 +31,35 @@ header, .stAppHeader {
 """, unsafe_allow_html=True)
 
 
-# --- RECHERCHE INTELLIGENTE ---
-st.markdown("### 🔍 Rechercher une entreprise")
-query = st.text_input("Tape le nom (ex: Honest, Apple, Tesla...) ou le Ticker", value="AAPL")
 
-ticker = "" # Initialisation
+# Barre de recherche intelligente
+search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple")
 
-if query:
+# Liste déroulante de suggestions
+if search_query:
     try:
-        # On interroge l'autocomplétion de Yahoo Finance
-        search = yf.Search(query, max_results=8)
-        results = search.tickers
+        # Recherche Yahoo Finance
+        search_results = yf.Search(search_query, max_results=5)
+        quotes = search_results.quotes
         
-        if results:
-            # On prépare les options : "TICKER - Nom (Bourse)"
-            options = []
-            for res in results:
-                name = res.get('shortname', 'Nom inconnu')
-                exch = res.get('exchange', 'Bourse inconnue')
-                symb = res.get('symbol', '')
-                options.append(f"{symb} - {name} ({exch})")
+        if quotes:
+            # Créer les options pour le menu déroulant
+            options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
             
-            # Affichage du menu déroulant
-            selection = st.selectbox("Sélectionne l'entreprise précise :", options)
+            # Menu déroulant
+            selected = st.selectbox("Sélectionnez l'entreprise :", options)
             
-            # On récupère uniquement le Ticker (ce qui est avant le premier espace)
-            ticker = selection.split(" ")[0]
+            # Extraire le ticker de la sélection (partie avant le " - ")
+            ticker = selected.split(" - ")[0]
         else:
-            st.warning("Aucun résultat trouvé pour ce nom.")
-    except Exception as e:
-        # En cas d'erreur de l'API de recherche, on tente d'utiliser la saisie brute
-        ticker = query.upper()
-# --- FIN DU BLOC RECHERCHE ---
+            st.warning(f"Aucun résultat pour '{search_query}'")
+            ticker = None
+    except:
+        # Si la recherche échoue, essayer directement le ticker
+        ticker = search_query.upper()
+else:
+    ticker = None
+
 
 if ticker:
     try:
