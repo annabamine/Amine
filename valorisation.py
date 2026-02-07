@@ -6,29 +6,57 @@ import feedparser
 
 st.markdown("""
 <style>
+/* Fond de l'application */
 .stApp {
     background-color: #fffdf4;
 }
+
+/* Force le texte en noir pour les éléments standards */
 .stApp * {
     color: black !important;
     font-size: 15px !important;
 }
-div, p, span, label, .stMarkdown, .stWrite, .stText, .stNumberInput label, .stTextInput label, .stHeader, .stAlert, .stSuccess, .stWarning, .stError {
-    color: black !important;
-    font-size: 15px !important;
+
+/* --- CORRECTION DU MENU DÉROULANT (SELECTBOX) --- */
+
+/* Fond du champ de sélection */
+div[data-baseweb="select"] > div {
+    background-color: white !important;
 }
+
+/* Fond de la liste qui s'ouvre (le menu) */
+div[data-baseweb="popover"] ul {
+    background-color: white !important;
+}
+
+/* Style des options individuelles dans la liste */
+div[data-baseweb="popover"] li {
+    background-color: white !important;
+    color: black !important;
+}
+
+/* Changement de couleur au survol de la souris */
+div[data-baseweb="popover"] li:hover {
+    background-color: #f0f0f0 !important;
+}
+
+/* Correction spécifique pour le texte à l'intérieur du champ */
+div[data-baseweb="select"] span, div[data-baseweb="select"] div {
+    color: black !important;
+}
+
+/* --- FIN CORRECTION MENU --- */
+
 div.stNumberInput input, div.stTextInput input {
     background-color: white !important;
     color: black !important;
     border: 1px solid gray !important;
-    font-size: 15px !important;
 }
+
 header, .stAppHeader {
     background-color: #fffdf4 !important;
-    color: black !important;
 }
-</style>
-""", unsafe_allow_html=True)
+</style>""", unsafe_allow_html=True)
 
 
 
