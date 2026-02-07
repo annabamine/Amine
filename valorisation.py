@@ -1,6 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
+import feedparser
 
 
 st.markdown("""
@@ -304,48 +305,29 @@ if ticker:
                     st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
 
 
-        # ONGLET 4 : ACTUALITÉS
+        # ONGLET 4 : ACTUALITÉS (Version RSS Stable)
         with tab4:
             st.title(f"📰 Dernières actualités : {company_name}")
             
-            try:
-                # On force une petite attente ou un rafraîchissement si nécessaire
-                news_list = action.news
-                
-                if news_list and len(news_list) > 0:
-                    for article in news_list[:10]:
-                        with st.container():
-                            col_text, col_img = st.columns([4, 1])
-                            
-                            # On cherche le titre dans plusieurs clés possibles
-                            title = article.get('title') or article.get('headline') or "Titre non disponible"
-                            
-                            # On cherche le lien de manière ultra-sécurisée
-                            link = article.get('link') or article.get('url')
-                            
-                            # On cherche la source
-                            source = article.get('publisher') or article.get('source') or "Yahoo Finance"
-                            
-                            with col_text:
-                                st.subheader(title)
-                                st.write(f"🏠 *Source : {source}*")
-                                
-                                if link:
-                                    # Utilisation d'un bouton stylisé ou d'un lien HTML direct
-                                    st.markdown(f'🔗 <a href="{link}" target="_blank" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article sur Yahoo</a>', unsafe_allow_html=True)
-                                else:
-                                    st.info("Lien direct non disponible pour cet article.")
-
-                            with col_img:
-                                # Gestion des miniatures
-                                thumb_data = article.get('thumbnail', {})
-                                resolutions = thumb_data.get('resolutions', [])
-                                if resolutions:
-                                    st.image(resolutions[0].get('url'), use_container_width=True)
-                            
-                            st.divider()
-                else:
-                    st.warning(f"⚠️ Yahoo Finance ne renvoie aucune actualité pour {ticker_symbol} en ce moment. Cela arrive parfois sur les petites capitalisations.")
+            # Construction de l'URL du flux RSS Yahoo Finance pour le ticker
+            rss_url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
+            feed = feedparser.parse(rss_url)
+            
+            if feed.entries:
+                for entry in feed.entries[:10]:
+                    with st.container():
+                        # Titre de l'article
+                        st.subheader(entry.title)
+                        
+                        # Source et Date (Yahoo RSS met souvent la source dans le titre ou en fin de description)
+                        st.write(f"📅 Publié le : {entry.published}")
+                        
+                        # Lien vers l'article original
+                        st.markdown(f'🔗 <a href="{entry.link}" target="_blank" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
+                        
+                        st.divider()
+            else:
+                st.info(f"Aucune actualité trouvée via le flux RSS pour {ticker}. Il est possible que le ticker soit trop récent ou très peu suivi.")
             
             except Exception as e:
                 st.error(f"Erreur technique lors de la récupération des news : {e}")
