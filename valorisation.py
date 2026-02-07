@@ -310,27 +310,36 @@ if ticker:
             
             news = action.news
             if news:
-                for article in news[:10]:  # On affiche les 10 dernières news
-                    # Création d'un container pour chaque news
+                for article in news[:10]:
                     with st.container():
                         col_text, col_img = st.columns([4, 1])
                         
+                        # Récupération sécurisée du titre et du lien
+                        title = article.get('title', 'Titre non disponible')
+                        link = article.get('link')
+                        
+                        # Récupération sécurisée de la source
+                        # Yahoo peut utiliser 'publisher' ou 'source'
+                        source = article.get('publisher') or article.get('source') or "Yahoo Finance"
+                        
                         with col_text:
-                            st.subheader(article.get('title'))
-                            # Affichage de la source et de la date (si dispo)
-                            source = article.get('publisher', 'Source inconnue')
-                            st.write(f"🏠 *{source}*")
-                            st.markdown(f"[Lire l'article complet]({article.get('link')})")
+                            st.subheader(title)
+                            st.write(f"🏠 *Source : {source}*")
+                            
+                            # On vérifie que le lien existe avant d'afficher le bouton
+                            if link:
+                                st.markdown(f'<a href="{link}" target="_blank">Lire l\'article complet</a>', unsafe_allow_html=True)
+                            else:
+                                st.write("Lien non disponible")
                         
                         with col_img:
-                            # Affichage de la miniature si elle existe
                             thumbnail = article.get('thumbnail', {}).get('resolutions', [])
                             if thumbnail:
                                 st.image(thumbnail[0].get('url'), use_container_width=True)
                         
-                        st.divider() # Ligne de séparation entre les articles
+                        st.divider()
             else:
-                st.write("Aucune actualité récente trouvée pour ce ticker.")
+                st.write("Aucune actualité récente trouvée.")
         
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
