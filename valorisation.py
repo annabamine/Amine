@@ -32,33 +32,38 @@ header, .stAppHeader {
 
 
 # --- RECHERCHE INTELLIGENTE ---
-# On remplace l'ancien ticker = st.text_input(...) par ce bloc :
+st.markdown("### 🔍 Rechercher une entreprise")
+query = st.text_input("Tape le nom (ex: Honest, Apple, Tesla...) ou le Ticker", value="AAPL")
 
-query = st.text_input("Recherche une entreprise (ex: Apple, Honest, LVMH...)", "Apple")
-
-ticker = "" # On initialise le ticker vide
+ticker = "" # Initialisation
 
 if query:
-    # On cherche les correspondances via yfinance
-    search_results = yf.Search(query, max_results=5).tickers
-    
-    if search_results:
-        # On crée une liste propre pour le menu déroulant
-        options = []
-        for res in search_results:
-            # On affiche le Ticker - Nom - Bourse (ex: AAPL - Apple Inc. - NASDAQ)
-            label = f"{res['symbol']} - {res['shortname']} ({res['exchange']})"
-            options.append(label)
+    try:
+        # On interroge l'autocomplétion de Yahoo Finance
+        search = yf.Search(query, max_results=8)
+        results = search.tickers
         
-        # Menu déroulant pour choisir le bon ticker
-        selection = st.selectbox("Sélectionne l'entreprise exacte :", options)
-        
-        # On extrait le ticker de la sélection (la partie avant le premier espace)
-        ticker = selection.split(" - ")[0]
-    else:
-        st.error("Aucun résultat trouvé. Essaie avec un nom plus précis ou le ticker direct.")
-
+        if results:
+            # On prépare les options : "TICKER - Nom (Bourse)"
+            options = []
+            for res in results:
+                name = res.get('shortname', 'Nom inconnu')
+                exch = res.get('exchange', 'Bourse inconnue')
+                symb = res.get('symbol', '')
+                options.append(f"{symb} - {name} ({exch})")
+            
+            # Affichage du menu déroulant
+            selection = st.selectbox("Sélectionne l'entreprise précise :", options)
+            
+            # On récupère uniquement le Ticker (ce qui est avant le premier espace)
+            ticker = selection.split(" ")[0]
+        else:
+            st.warning("Aucun résultat trouvé pour ce nom.")
+    except Exception as e:
+        # En cas d'erreur de l'API de recherche, on tente d'utiliser la saisie brute
+        ticker = query.upper()
 # --- FIN DU BLOC RECHERCHE ---
+
 
 if ticker:
     try:
