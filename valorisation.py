@@ -306,44 +306,51 @@ if ticker:
 
         # ONGLET 4 : ACTUALITÉS
         with tab4:
-            st.title("📰 Actualités récentes")
+            st.title(f"📰 Dernières actualités : {company_name}")
             
             try:
-                # Récupérer les actualités depuis Yahoo Finance
-                news = action.news
+                # On force une petite attente ou un rafraîchissement si nécessaire
+                news_list = action.news
                 
-                if news and len(news) > 0:
-                    # Afficher les 10 dernières actualités
-                    for i, article in enumerate(news[:10]):
-                        # Titre
-                        title = article.get('title', 'Sans titre')
-                        
-                        # Lien
-                        link = article.get('link', '')
-                        
-                        # Source
-                        publisher = article.get('publisher', 'Source inconnue')
-                        
-                        # Date (timestamp Unix à convertir)
-                        timestamp = article.get('providerPublishTime', 0)
-                        if timestamp:
-                            from datetime import datetime
-                            date = datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y %H:%M')
-                        else:
-                            date = "Date inconnue"
-                        
-                        # Affichage
-                        st.markdown(f"### [{title}]({link})")
-                        st.caption(f"📅 {date} • 📰 {publisher}")
-                        
-                        # Séparateur
-                        if i < len(news[:10]) - 1:
-                            st.write("---")
+                if news_list and len(news_list) > 0:
+                    for article in news_list[:10]:
+                        with st.container():
+                            col_text, col_img = st.columns([4, 1])
+                            
+                            # On cherche le titre dans plusieurs clés possibles
+                            title = article.get('title') or article.get('headline') or "Titre non disponible"
+                            
+                            # On cherche le lien de manière ultra-sécurisée
+                            link = article.get('link') or article.get('url')
+                            
+                            # On cherche la source
+                            source = article.get('publisher') or article.get('source') or "Yahoo Finance"
+                            
+                            with col_text:
+                                st.subheader(title)
+                                st.write(f"🏠 *Source : {source}*")
+                                
+                                if link:
+                                    # Utilisation d'un bouton stylisé ou d'un lien HTML direct
+                                    st.markdown(f'🔗 <a href="{link}" target="_blank" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article sur Yahoo</a>', unsafe_allow_html=True)
+                                else:
+                                    st.info("Lien direct non disponible pour cet article.")
+
+                            with col_img:
+                                # Gestion des miniatures
+                                thumb_data = article.get('thumbnail', {})
+                                resolutions = thumb_data.get('resolutions', [])
+                                if resolutions:
+                                    st.image(resolutions[0].get('url'), use_container_width=True)
+                            
+                            st.divider()
                 else:
-                    st.info("Aucune actualité disponible pour ce ticker")
-                    
+                    st.warning(f"⚠️ Yahoo Finance ne renvoie aucune actualité pour {ticker_symbol} en ce moment. Cela arrive parfois sur les petites capitalisations.")
+            
             except Exception as e:
-                st.error(f"Impossible de récupérer les actualités : {e}")
+                st.error(f"Erreur technique lors de la récupération des news : {e}")
+
+
 
 
         
