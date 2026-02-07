@@ -80,7 +80,7 @@ if ticker:
             if abs_val >= 1_000_000_000:
                return f"{valeur / 1_000_000_000:,.2f} Mds {devise}"
             else:
-               return f"{valeur / 1_000_000:,.0f} M {devise}"
+               return f"{valeur / 1_000_000:,.2f} M {devise}"
         
         # Créer les onglets
         tab1, tab2, tab3 = st.tabs(["🔢 Ratios", "📊 Méthode 1", "💰 Méthode 2"])
