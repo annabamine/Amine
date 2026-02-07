@@ -98,12 +98,22 @@ if ticker:
                 st.write(f"**PER (forward)** : {fper}")
                 st.write(f"**EPS (trailing)** : {eps}")
                 
-                # Debt-to-Equity
-                debt_to_equity = infos.get("debtToEquity")
-                if debt_to_equity is not None:
-                    st.write(f"**Debt/Equity** : {debt_to_equity:.2f}%")
-                else:
-                    st.write("**Debt/Equity** : N/A")
+                
+                # Price-to-Operating Cash Flow (TTM)
+                try:
+                    ocf_ttm = infos.get("operatingCashflow")
+                    # Fallback annuel si le TTM n'est pas dispo dans info
+                    if not ocf_ttm:
+                        ocf_ttm = action.cashflow.loc["Operating Cash Flow"].iloc[0]
+                    
+                    if ocf_ttm and market_cap and ocf_ttm > 0:
+                        p_ocf = market_cap / ocf_ttm
+                        st.write(f"**Price/OCF** : {p_ocf:.2f}")
+                    else:
+                        st.write("**Price/OCF** : N/A")
+                except:
+                    st.write("**Price/OCF** : N/A")
+
 
                 # Price-to-Free Cash Flow (TTM)
                 try:
@@ -118,6 +128,16 @@ if ticker:
                         st.write("**Price/FCF** : N/A")
                 except:
                     st.write("**Price/FCF** : N/A")
+
+
+                # Debt-to-Equity
+                debt_to_equity = infos.get("debtToEquity")
+                if debt_to_equity is not None:
+                    st.write(f"**Debt/Equity** : {debt_to_equity:.2f}%")
+                else:
+                    st.write("**Debt/Equity** : N/A")
+
+
             
             # Colonne 2 : CAPEX, OCF, CAPEX/OCF (TTM)
             with col2:
@@ -141,6 +161,15 @@ if ticker:
                         st.write(f"**CAPEX/OCF** : {ratio_capex_ocf:.1f} %")
                     else:
                         st.write("**CAPEX/OCF** : N/A")
+
+
+                    # Gross Margin (TTM)
+                    gross_margin = infos.get("grossMargins")
+                    if gross_margin is not None:
+                       st.write(f"**Gross Margin** : {gross_margin * 100:.1f} %")
+                    else:
+                       st.write("**Gross Margin** : N/A")
+
                         
                     profit_margin = infos.get("profitMargins")
                     if profit_margin is not None:
