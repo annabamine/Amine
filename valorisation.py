@@ -123,15 +123,15 @@ if ticker:
                         
                         # CAPEX
                         if capex is not None:
-                            capex_millions = capex / 1_000_000
-                            st.write(f"**CAPEX** : {capex_millions:,.0f} M {devise}")
+                            capex_billions = capex / 1_000_000_000
+                            st.write(f"**CAPEX** : {capex_billions:,.2f} Mds {devise}")
                         else:
                             st.write("**CAPEX** : N/A")
                         
                         # Operating Cash Flow
                         if operating_cash_flow is not None:
-                            ocf_millions = operating_cash_flow / 1_000_000
-                            st.write(f"**Op Cash Flow** : {ocf_millions:,.0f} M {devise}")
+                            ocf_billions = operating_cash_flow / 1_000_000_000
+                            st.write(f"**Op Cash Flow** : {ocf_billions:,.2f} Mds {devise}")
                         else:
                             st.write("**Op Cash Flow** : N/A")
                         
@@ -165,8 +165,8 @@ if ticker:
                         free_cash_flow = cashflow.loc["Free Cash Flow"].iloc[0] if "Free Cash Flow" in cashflow.index else None
                         
                         if free_cash_flow is not None:
-                            fcf_millions = free_cash_flow / 1_000_000
-                            st.write(f"**Free Cash Flow** : {fcf_millions:,.0f} M {devise}")
+                            fcf_billions = free_cash_flow / 1_000_000_000
+                            st.write(f"**Free Cash Flow** : {fcf_billions:,.2f} Mds {devise}")
                         else:
                             st.write("**Free Cash Flow** : N/A")
                     else:
