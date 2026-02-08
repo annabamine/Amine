@@ -120,28 +120,16 @@ header, .stAppHeader {
 }
 </style>""", unsafe_allow_html=True)
 
-# 1. On récupère le ticker dans l'URL s'il existe, sinon on met "Apple" par défaut
-url_ticker = st.query_params.get("ticker", "Apple")
+search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple")
 
-# 2. Barre de recherche (On utilise url_ticker comme valeur initiale)
-search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", url_ticker)
-
-# 3. Logique de recherche Yahoo Finance
 if search_query:
     try:
         search_results = yf.Search(search_query, max_results=5)
         quotes = search_results.quotes
         if quotes:
             options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
-            
-            # On cherche l'index du ticker actuel pour que le menu déroulant soit bien positionné
-            default_index = 0
-            selected = st.selectbox("Sélectionnez l'entreprise :", options, index=default_index)
+            selected = st.selectbox("Sélectionnez l'entreprise :", options)
             ticker = selected.split(" - ")[0]
-            
-            # --- LA MAGIE EST ICI ---
-            # On met à jour l'URL sans recharger la page
-            st.query_params["ticker"] = ticker
         else:
             st.warning(f"Aucun résultat pour '{search_query}'")
             ticker = None
