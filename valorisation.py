@@ -9,31 +9,37 @@ st.set_page_config(page_title="Value Quest", layout="centered")
 # 2. Barre de titre (À copier-coller d'un seul bloc)
 st.markdown("""
     <style>
+        /* Masquer le superflu */
         header {visibility: hidden;}
         footer {visibility: hidden;}
         #MainMenu {visibility: hidden;}
         
         .block-container {
-            padding-top: 4rem; 
+            padding-top: 4.5rem; 
         }
 
+        /* Barre de titre Style Premium */
         .nav-bar {
-            background-color: #1A1C21;
-            border-bottom: 2px solid #C0C0C0;
-            padding: 15px;
+            background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%); /* Dégradé bleu pro */
+            border-bottom: 2px solid #C0C0C0; /* Ligne argentée */
+            padding: 12px;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            z-index: 999999; /* On force l'affichage au premier plan */
+            z-index: 99999;
             text-align: center;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
         }
         
         .nav-title {
-            color: #FFFFFF !important; /* On force le blanc */
+            color: #FFFFFF !important; /* BLANC PUR FORCE */
             font-size: 22px;
-            font-weight: bold;
+            font-weight: 900;
+            letter-spacing: 2px;
             text-transform: uppercase;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Ombre portée sur le texte */
         }
     </style>
     
@@ -41,9 +47,6 @@ st.markdown("""
         <span class="nav-title">VALUE QUEST</span>
     </div>
 """, unsafe_allow_html=True)
-
-# 3. Le reste de ton code (ton titre de test, tes calculs, etc.)
-st.title("✅ Si tu vois ça, le code est à jour")
 
 
 st.markdown("""
