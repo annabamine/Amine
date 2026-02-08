@@ -90,11 +90,7 @@ st.markdown("""
     background-color: #fffdf4;
 }
 
-/* Force le texte en noir pour les éléments standards */
-.stApp * {
-    color: black !important;
-    font-size: 15px !important;
-}
+
 
 /* --- CORRECTION DU MENU DÉROULANT (SELECTBOX) --- */
 
