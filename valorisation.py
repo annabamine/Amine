@@ -2,39 +2,38 @@ import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
 import feedparser
+import base64
 
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
 
-# 2. Barre de titre 
-
-import base64
-
-# Fonction pour encoder l'image locale en base64 (pour qu'elle s'affiche dans le HTML)
+# 2. Barre de titre (Logique Logo + HTML)
 def get_base64_image(image_path):
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode()
+    try:
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except:
+        return None
 
-# Tente de charger le logo (assure-toi que logo.png est dans le même dossier)
-try:
-    logo_base64 = get_base64_image("logo.png")
+logo_base64 = get_base64_image("logo.png")
+if logo_base64:
     logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="nav-logo">'
-except:
-    logo_html = "🪙" # Emoji de secours si le fichier est absent
+else:
+    logo_html = "🪙"
 
-# Injection CSS et HTML
+# Injection de la barre de navigation
 st.markdown(f"""
     <style>
-        header {{visibility: hidden;}}
-        footer {{visibility: hidden;}}
-        #MainMenu {{visibility: hidden;}}
+        header {{visibility: hidden !important;}}
+        footer {{visibility: hidden !important;}}
+        #MainMenu {{visibility: hidden !important;}}
         
         .block-container {{
             padding-top: 6rem !important; 
         }}
 
         .nav-bar {{
-            background-color: #001f3f; 
+            background-color: #001f3f !important; 
             border-bottom: 3px solid #C0C0C0;
             padding: 12px;
             position: fixed;
@@ -53,15 +52,12 @@ st.markdown(f"""
             margin-right: 15px;
         }}
         
-        /* C'est ici qu'on force le beige et la police */
         .nav-title {{
             color: #FEF9ED !important; 
-            fill: #FEF9ED !important; /* Pour certains navigateurs */
             font-size: 24px;
             font-weight: 700;
             letter-spacing: 1.5px;
             text-transform: uppercase;
-            /* Utilisation de la police système pour être raccord avec l'outil */
             font-family: "Source Sans Pro", sans-serif; 
             margin: 0;
         }}
@@ -73,53 +69,40 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-
-
+# 3. Styles globaux et corrections des éléments (Cible sélective pour éviter le noir sur le titre)
 st.markdown("""
 <style>
-
-/* Cache le header Streamlit (la barre en haut) */
-        header {visibility: hidden;}
-        /* Cache le menu "hamburger" et le footer */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        /* Ajuste la marge pour que ça colle au bord du téléphone */
-        .block-container {padding-top: 1rem;}
 /* Fond de l'application */
 .stApp {
     background-color: #fffdf4;
 }
 
-/* Force le texte en noir pour les éléments standards */
-.stApp * {
+/* On force le texte en noir UNIQUEMENT pour le contenu principal */
+/* On exclut la barre de navigation personnalisée */
+.stMainBlockContainer *:not(.nav-bar):not(.nav-title) {
     color: black !important;
     font-size: 15px !important;
 }
 
-/* --- CORRECTION DU MENU DÉROULANT (SELECTBOX) --- */
+/* Correction spécifique pour les onglets */
+.stTabs [data-baseweb="tab"] p {
+    color: black !important;
+}
 
-/* Fond du champ de sélection */
+/* --- CORRECTION DU MENU DÉROULANT (SELECTBOX) --- */
 div[data-baseweb="select"] > div {
     background-color: white !important;
 }
-
-/* Fond de la liste qui s'ouvre (le menu) */
 div[data-baseweb="popover"] ul {
     background-color: white !important;
 }
-
-/* Style des options individuelles dans la liste */
 div[data-baseweb="popover"] li {
     background-color: white !important;
     color: black !important;
 }
-
-/* Changement de couleur au survol de la souris */
 div[data-baseweb="popover"] li:hover {
     background-color: #f0f0f0 !important;
 }
-
-/* Correction spécifique pour le texte à l'intérieur du champ */
 div[data-baseweb="select"] span, div[data-baseweb="select"] div {
     color: black !important;
 }
@@ -137,36 +120,24 @@ header, .stAppHeader {
 }
 </style>""", unsafe_allow_html=True)
 
-
-
-# Barre de recherche intelligente
+# --- RESTE DU CODE ---
 search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple")
 
-# Liste déroulante de suggestions
 if search_query:
     try:
-        # Recherche Yahoo Finance
         search_results = yf.Search(search_query, max_results=5)
         quotes = search_results.quotes
-        
         if quotes:
-            # Créer les options pour le menu déroulant
             options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
-            
-            # Menu déroulant
             selected = st.selectbox("Sélectionnez l'entreprise :", options)
-            
-            # Extraire le ticker de la sélection (partie avant le " - ")
             ticker = selected.split(" - ")[0]
         else:
             st.warning(f"Aucun résultat pour '{search_query}'")
             ticker = None
     except:
-        # Si la recherche échoue, essayer directement le ticker
         ticker = search_query.upper()
 else:
     ticker = None
-
 
 if ticker:
     try:
@@ -178,13 +149,11 @@ if ticker:
         per = infos.get("trailingPE", "Non dispo")
         fper = infos.get("forwardPE", "Non dispo")
 
-        # Ajout : Nom de l'entreprise 
         company_name = infos.get("longName", infos.get("shortName", "Inconnu"))
         st.write(f"**Entreprise** : {company_name}")
         
         website = infos.get("website", "")
         if website:
-            # Extrait le domaine propre (ex: apple.com)
             domain = website.replace('https://', '').replace('http://', '').replace('www.', '').rstrip('/')
             logo_url = f"https://logos-api.apistemic.com/domain:{domain}"
             try:
@@ -194,22 +163,18 @@ if ticker:
         else:
             st.write("Pas de site web ou logo disponible")
 
-        # Résumé
         summary = infos.get("longBusinessSummary", "Résumé non disponible sur Yahoo")
         with st.expander("📄 Résumé de l'entreprise (Yahoo Finance)"):
             st.write(summary)
 
-        # Prix AVANT les onglets
         st.write(f"**Prix actuel** : {prix} {devise}")
 
-        # Capitalisation boursière
         market_cap = infos.get("marketCap")
         if market_cap is not None:
             market_cap_billions = market_cap / 1_000_000_000
             st.write(f"**Market Cap** : {market_cap_billions:,.2f} Mds {devise}")
         else:
             st.write("**Market Cap** : N/A")
-
 
         def format_valeur(valeur, devise):
             if valeur is None or valeur == "N/A": return "N/A"
@@ -219,30 +184,19 @@ if ticker:
             else:
                return f"{valeur / 1_000_000:,.2f} M {devise}"
         
-        # Créer les onglets
         tab1, tab2, tab3, tab4 = st.tabs(["🔢 Ratios", "📊 Méthode 1", "💰 Méthode 2", "📰 Actualités"])
         
-        # ONGLET 1 : RATIOS
         with tab1:
             st.title("🔢 Ratios financiers")
-            
-            # 3 colonnes pour les ratios
             col1, col2, col3 = st.columns(3)
-            
-            # Colonne 1 : PER, Forward PER, EPS
             with col1:
                 st.write(f"**PER (trailing)** : {per}")
                 st.write(f"**PER (forward)** : {fper}")
                 st.write(f"**EPS (trailing)** : {eps}")
-                
-                
-                # Price-to-Operating Cash Flow (TTM)
                 try:
                     ocf_ttm = infos.get("operatingCashflow")
-                    # Fallback annuel si le TTM n'est pas dispo dans info
                     if not ocf_ttm:
                         ocf_ttm = action.cashflow.loc["Operating Cash Flow"].iloc[0]
-                    
                     if ocf_ttm and market_cap and ocf_ttm > 0:
                         p_ocf = market_cap / ocf_ttm
                         st.write(f"**Price/OCF** : {p_ocf:.2f}")
@@ -251,13 +205,10 @@ if ticker:
                 except:
                     st.write("**Price/OCF** : N/A")
 
-
-                # Price-to-Free Cash Flow (TTM)
                 try:
                     fcf_ttm = infos.get("freeCashflow")
                     if not fcf_ttm:
                         fcf_ttm = action.cashflow.loc["Free Cash Flow"].iloc[0]
-                    
                     if fcf_ttm and market_cap and fcf_ttm > 0:
                         price_to_fcf = market_cap / fcf_ttm
                         st.write(f"**Price/FCF** : {price_to_fcf:.2f}")
@@ -266,22 +217,16 @@ if ticker:
                 except:
                     st.write("**Price/FCF** : N/A")
 
-
-                # Debt-to-Equity
                 debt_to_equity = infos.get("debtToEquity")
                 if debt_to_equity is not None:
                     st.write(f"**Debt/Equity** : {debt_to_equity:.2f}%")
                 else:
                     st.write("**Debt/Equity** : N/A")
 
-
-            
-            # Colonne 2 : CAPEX, OCF, CAPEX/OCF (TTM)
             with col2:
                 try:
                     ocf_ttm = infos.get("operatingCashflow")
                     fcf_ttm = infos.get("freeCashflow")
-                    
                     if ocf_ttm and fcf_ttm:
                         capex_ttm = fcf_ttm - ocf_ttm
                     else:
@@ -292,22 +237,18 @@ if ticker:
 
                     st.write(f"**CAPEX** : {format_valeur(abs(capex_ttm), devise)}")
                     st.write(f"**Op Cash Flow** : {format_valeur(ocf_ttm, devise)}")
-                    
                     if ocf_ttm and ocf_ttm != 0:
                         ratio_capex_ocf = abs(capex_ttm) / ocf_ttm * 100
                         st.write(f"**CAPEX/OCF** : {ratio_capex_ocf:.1f} %")
                     else:
                         st.write("**CAPEX/OCF** : N/A")
 
-
-                    # Gross Margin (TTM)
                     gross_margin = infos.get("grossMargins")
                     if gross_margin is not None:
                        st.write(f"**Gross Margin** : {gross_margin * 100:.1f} %")
                     else:
                        st.write("**Gross Margin** : N/A")
-
-                        
+                       
                     profit_margin = infos.get("profitMargins")
                     if profit_margin is not None:
                         st.write(f"**Profit Margin** : {profit_margin * 100:.1f} %")
@@ -320,44 +261,35 @@ if ticker:
                     st.write("**Op Cash Flow** : N/A")
                     st.write("**CAPEX/OCF** : N/A")
                     st.write("**Free Cash Flow** : N/A")
-            
-            # Colonne 3 : ROE, ROA
+
             with col3:
-                # ROE
                 roe = infos.get("returnOnEquity")
                 if roe is not None:
-                    roe_pct = roe * 100
-                    st.write(f"**ROE** : {roe_pct:.1f} %")
+                    st.write(f"**ROE** : {roe * 100:.1f} %")
                 else:
                     st.write("**ROE** : N/A")
                 
-                # ROA
                 roic = infos.get("returnOnAssets")
                 if roic is not None:
-                    roic_pct = roic * 100
-                    st.write(f"**ROA** : {roic_pct:.1f} %")
+                    st.write(f"**ROA** : {roic * 100:.1f} %")
                 else:
                     st.write("**ROA** : N/A")
 
-                # Dividend Yield
                 dividend_yield = infos.get("dividendYield")
                 if dividend_yield is not None:
                     st.write(f"**Dividend Yield** : {dividend_yield:.2f} %")
                 else:
                     st.write("**Dividend Yield** : N/A")
 
-                # Price-to-Book
                 price_to_book = infos.get("priceToBook")
                 if price_to_book is not None:
                     st.write(f"**Price/Book** : {price_to_book:.2f}")
                 else:
                     st.write("**Price/Book** : N/A")
 
-                # Debt-to-Free Cash Flow (TTM)
                 try:
                     total_debt = infos.get("totalDebt")
                     fcf_ttm = infos.get("freeCashflow") or action.cashflow.loc["Free Cash Flow"].iloc[0]
-                    
                     if fcf_ttm and total_debt and fcf_ttm > 0:
                         debt_to_fcf = total_debt / fcf_ttm
                         st.write(f"**Debt/FCF** : {debt_to_fcf:.2f} ans")
@@ -366,22 +298,18 @@ if ticker:
                 except:
                     st.write("**Debt/FCF** : N/A")
 
-                # --- Évolution du nombre d'actions sur 5 ans (Bloc robuste) ---
                 try:
                     bs = action.balance_sheet
                     keys_to_check = ["Ordinary Shares Number", "Share Issued", "Total Common Shares Outstanding"]
                     shares_series = None
-                    
                     for key in keys_to_check:
                         if key in bs.index:
                             shares_series = bs.loc[key]
                             break
-                            
                     if shares_series is not None and len(shares_series) >= 2:
                         shares_series = shares_series.dropna()
                         shares_recent = shares_series.iloc[0] 
                         shares_old = shares_series.iloc[-1]
-                        
                         if shares_old > 0:
                             shares_change = ((shares_recent - shares_old) / shares_old) * 100
                             emoji = "📈" if shares_change > 0 else "📉"
@@ -390,85 +318,54 @@ if ticker:
                             st.write("**Actions (évol.)** : N/A")
                     else:
                         st.write("**Actions (évol.)** : N/A")
-                except Exception:
+                except:
                     st.write("**Actions (évol.)** : N/A")
-        
-        # ONGLET 2 : MÉTHODE 1
+
         with tab2:
             st.title("📊 Méthode 1 - Estimation simple")
-            
-            # Nouvelle donnée d'entrée : l'horizon
             horizon_m1 = st.number_input("Horizon d'investissement (années)", min_value=1, max_value=30, value=5, step=1)
-            
             cagr_eps = st.number_input("Mon CAGR estimé pour les EPS (en %)", min_value=-100.0, value=12.0)
-            
             eps_actuel = infos.get("trailingEps", 0.01)
-            
-            # Calcul des EPS futurs basé sur l'horizon choisi
             eps_futur = eps_actuel * ((1 + cagr_eps / 100) ** horizon_m1)
-            
             per_estime = st.number_input(f"PER que j'estime dans {horizon_m1} ans", min_value=5.0, value=20.0)
-            
-            # Calcul du prix cible
             prix_cible = eps_futur * per_estime
             st.write(f"**Prix cible dans {horizon_m1} ans** : {prix_cible:.2f} {devise}")
-
             if isinstance(prix, (float, int)) and prix_cible > 0 and prix > 0:
-                # Calcul du CAGR du prix sur l'horizon choisi
                 cagr_prix = ((prix_cible / prix) ** (1/horizon_m1) - 1) * 100
-                
                 if cagr_prix >= 10:
                     st.success(f"**CAGR au prix actuel ({horizon_m1} ans)** : {cagr_prix:.1f} %")
                 else:
                     st.error(f"**CAGR au prix actuel ({horizon_m1} ans)** : {cagr_prix:.1f} %")
-        
-        # ONGLET 3 : MÉTHODE 2
+
         with tab3:
             st.title("💰 Méthode 2 - Prix d'entrée juste")
-
             rendement_attendu = st.number_input("Rendement annuel attendu (%)", value=10.0)
             horizon = st.number_input("Nombre d'années", value=5, step=1)
             per_futur = st.number_input("PER que j'estime à l'horizon", min_value=5.0, value=20.0)
-
             prix_futur = eps_actuel * ((1 + cagr_eps / 100) ** horizon) * per_futur
             prix_entree = prix_futur / ((1 + rendement_attendu / 100) ** horizon)
-            
             if isinstance(prix, (float, int)) and prix > 0 and prix_futur > 0:
-                implied_cagr = ((prix_futur / prix) ** (1/horizon) - 1) * 100
                 if prix_entree >= prix:
                     st.success(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
                 else:
                     st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
 
-
-        # ONGLET 4 : ACTUALITÉS (Version RSS Stable)
         with tab4:
             st.title(f"📰 Dernières actualités : {company_name}")
-            
             try:
-                # Construction de l'URL du flux RSS Yahoo Finance pour le ticker
                 rss_url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
                 feed = feedparser.parse(rss_url)
-                
                 if feed.entries:
                     for entry in feed.entries[:10]:
                         with st.container():
-                            # Titre de l'article
                             st.subheader(entry.title)
-                            
-                            # Source et Date (Yahoo RSS met souvent la source dans le titre ou en fin de description)
                             st.write(f"📅 Publié le : {entry.published}")
-                            
-                            # Lien vers l'article original
                             st.markdown(f'🔗 <a href="{entry.link}" target="_blank" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
-                            
                             st.divider()
                 else:
-                    st.info(f"Aucune actualité trouvée via le flux RSS pour {ticker}. Il est possible que le ticker soit trop récent ou très peu suivi.")
-                
+                    st.info(f"Aucune actualité trouvée.")
             except Exception as e:
-                st.error(f"Erreur technique lors de la récupération des news : {e}")
+                st.error(f"Erreur news : {e}")
 
-        
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
