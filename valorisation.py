@@ -9,22 +9,20 @@ st.set_page_config(page_title="Value Quest", layout="centered")
 # 2. Barre de titre 
 st.markdown("""
     <style>
-        /* Nettoyage de l'interface Streamlit */
+        /* Masquer les éléments Streamlit */
         header {visibility: hidden;}
         footer {visibility: hidden;}
         #MainMenu {visibility: hidden;}
         
-        /* ESPACE ENTRE LA BARRE ET LE CONTENU */
-        /* On augmente le padding-top pour décoller le texte de la barre */
+        /* Espace de respiration sous la barre */
         .block-container {
             padding-top: 6rem !important; 
-            padding-bottom: 1rem;
         }
 
-        /* BARRE DE TITRE BLEU FONCÉ FINANCE */
+        /* Barre de titre Bleu Nuit */
         .nav-bar {
-            background-color: #001f3f; /* Bleu Nuit / Navy très profond */
-            border-bottom: 3px solid #C0C0C0; /* Ligne argentée plus marquée */
+            background-color: #001f3f; 
+            border-bottom: 3px solid #C0C0C0;
             padding: 15px;
             position: fixed;
             top: 0;
@@ -35,14 +33,15 @@ st.markdown("""
             box-shadow: 0px 5px 15px rgba(0,0,0,0.4);
         }
         
+        /* Le Titre en Blanc-Beige avec la police du système */
         .nav-title {
-            color: #FFFFFF !important;
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: 3px;
+            color: #FEF9ED !important; /* Couleur beige clair / crème */
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            /* Utilise la police par défaut de l'utilisateur (Android/iOS) */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             text-transform: uppercase;
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
         }
     </style>
     
@@ -50,6 +49,7 @@ st.markdown("""
         <span class="nav-title">VALUE QUEST</span>
     </div>
 """, unsafe_allow_html=True)
+
 
 st.markdown("""
 <style>
