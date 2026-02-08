@@ -6,6 +6,15 @@ import feedparser
 
 st.markdown("""
 <style>
+
+
+/* Cache le header Streamlit (la barre en haut) */
+        header {visibility: hidden;}
+        /* Cache le menu "hamburger" et le footer */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        /* Ajuste la marge pour que ça colle au bord du téléphone */
+        .block-container {padding-top: 1rem;}
 /* Fond de l'application */
 .stApp {
     background-color: #fffdf4;
