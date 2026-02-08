@@ -3,11 +3,49 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import feedparser
 
-# FORCE LA CONFIGURATION ICI
-st.set_page_config(page_title="TEST VALUE QUEST", layout="wide")
+# 1. Toujours en premier
+st.set_page_config(page_title="Value Quest", layout="centered")
 
-# AJOUTE CE TITRE TEMPORAIRE POUR VOIR SI CA BOUGE
+# 2. Barre de titre (À copier-coller d'un seul bloc)
+st.markdown("""
+    <style>
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
+        #MainMenu {visibility: hidden;}
+        
+        .block-container {
+            padding-top: 4rem; 
+        }
+
+        .nav-bar {
+            background-color: #1A1C21;
+            border-bottom: 2px solid #C0C0C0;
+            padding: 15px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 999999; /* On force l'affichage au premier plan */
+            text-align: center;
+        }
+        
+        .nav-title {
+            color: #FFFFFF !important; /* On force le blanc */
+            font-size: 22px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+    </style>
+    
+    <div class="nav-bar">
+        <span class="nav-title">VALUE QUEST</span>
+    </div>
+""", unsafe_allow_html=True)
+
+# 3. Le reste de ton code (ton titre de test, tes calculs, etc.)
 st.title("✅ Si tu vois ça, le code est à jour")
+
+
 st.markdown("""
 <style>
 
