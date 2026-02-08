@@ -3,13 +3,11 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import feedparser
 
-# Ton st.set_page_config() si tu en as un
-st.set_page_config(
-    page_title="Value Quest",
-    layout="centered", # ou "wide"
-    initial_sidebar_state="auto" # ou "collapsed"
-)
+# FORCE LA CONFIGURATION ICI
+st.set_page_config(page_title="TEST VALUE QUEST", layout="wide")
 
+# AJOUTE CE TITRE TEMPORAIRE POUR VOIR SI CA BOUGE
+st.title("✅ Si tu vois ça, le code est à jour")
 st.markdown("""
 <style>
 
