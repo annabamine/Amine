@@ -3,10 +3,15 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import feedparser
 
+# Ton st.set_page_config() si tu en as un
+st.set_page_config(
+    page_title="Value Quest",
+    layout="centered", # ou "wide"
+    initial_sidebar_state="auto" # ou "collapsed"
+)
 
 st.markdown("""
 <style>
-
 
 /* Cache le header Streamlit (la barre en haut) */
         header {visibility: hidden;}
