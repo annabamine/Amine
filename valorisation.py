@@ -6,40 +6,43 @@ import feedparser
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
 
-# 2. Barre de titre (À copier-coller d'un seul bloc)
+# 2. Barre de titre 
 st.markdown("""
     <style>
-        /* Masquer le superflu */
+        /* Nettoyage de l'interface Streamlit */
         header {visibility: hidden;}
         footer {visibility: hidden;}
         #MainMenu {visibility: hidden;}
         
+        /* ESPACE ENTRE LA BARRE ET LE CONTENU */
+        /* On augmente le padding-top pour décoller le texte de la barre */
         .block-container {
-            padding-top: 4.5rem; 
+            padding-top: 6rem !important; 
+            padding-bottom: 1rem;
         }
 
-        /* Barre de titre Style Premium */
+        /* BARRE DE TITRE BLEU FONCÉ FINANCE */
         .nav-bar {
-            background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%); /* Dégradé bleu pro */
-            border-bottom: 2px solid #C0C0C0; /* Ligne argentée */
-            padding: 12px;
+            background-color: #001f3f; /* Bleu Nuit / Navy très profond */
+            border-bottom: 3px solid #C0C0C0; /* Ligne argentée plus marquée */
+            padding: 15px;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             z-index: 99999;
             text-align: center;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0px 5px 15px rgba(0,0,0,0.4);
         }
         
         .nav-title {
-            color: #FFFFFF !important; /* BLANC PUR FORCE */
-            font-size: 22px;
-            font-weight: 900;
-            letter-spacing: 2px;
+            color: #FFFFFF !important;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 3px;
             text-transform: uppercase;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Ombre portée sur le texte */
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
         }
     </style>
     
@@ -47,7 +50,6 @@ st.markdown("""
         <span class="nav-title">VALUE QUEST</span>
     </div>
 """, unsafe_allow_html=True)
-
 
 st.markdown("""
 <style>
