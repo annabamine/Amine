@@ -7,48 +7,72 @@ import feedparser
 st.set_page_config(page_title="Value Quest", layout="centered")
 
 # 2. Barre de titre 
-st.markdown("""
-    <style>
-        /* Masquer les éléments Streamlit */
-        header {visibility: hidden;}
-        footer {visibility: hidden;}
-        #MainMenu {visibility: hidden;}
-        
-        /* Espace de respiration sous la barre */
-        .block-container {
-            padding-top: 6rem !important; 
-        }
 
-        /* Barre de titre Bleu Nuit */
-        .nav-bar {
+import base64
+
+# Fonction pour encoder l'image locale en base64 (pour qu'elle s'affiche dans le HTML)
+def get_base64_image(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
+# Tente de charger le logo (assure-toi que logo.png est dans le même dossier)
+try:
+    logo_base64 = get_base64_image("logo.png")
+    logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="nav-logo">'
+except:
+    logo_html = "🪙" # Emoji de secours si le fichier est absent
+
+# Injection CSS et HTML
+st.markdown(f"""
+    <style>
+        header {{visibility: hidden;}}
+        footer {{visibility: hidden;}}
+        #MainMenu {{visibility: hidden;}}
+        
+        .block-container {{
+            padding-top: 6rem !important; 
+        }}
+
+        .nav-bar {{
             background-color: #001f3f; 
             border-bottom: 3px solid #C0C0C0;
-            padding: 15px;
+            padding: 12px;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             z-index: 99999;
-            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             box-shadow: 0px 5px 15px rgba(0,0,0,0.4);
-        }
+        }}
+
+        .nav-logo {{
+            height: 35px;
+            margin-right: 15px;
+        }}
         
-        /* Le Titre en Blanc-Beige avec la police du système */
-        .nav-title {
-            color: #FEF9ED !important; /* Couleur beige clair / crème */
-            font-size: 22px;
+        /* C'est ici qu'on force le beige et la police */
+        .nav-title {{
+            color: #FEF9ED !important; 
+            fill: #FEF9ED !important; /* Pour certains navigateurs */
+            font-size: 24px;
             font-weight: 700;
-            letter-spacing: 1px;
-            /* Utilise la police par défaut de l'utilisateur (Android/iOS) */
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
-        }
+            /* Utilisation de la police système pour être raccord avec l'outil */
+            font-family: "Source Sans Pro", sans-serif; 
+            margin: 0;
+        }}
     </style>
     
     <div class="nav-bar">
+        {logo_html}
         <span class="nav-title">VALUE QUEST</span>
     </div>
 """, unsafe_allow_html=True)
+
 
 
 st.markdown("""
