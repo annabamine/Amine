@@ -115,7 +115,7 @@ header, .stAppHeader {
 
 
 
-
+st.link_button("Test Ouverture Système", "https://www.google.com")
 search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple")
 
 if search_query:
@@ -354,7 +354,14 @@ if ticker:
                     for entry in feed.entries[:10]:
                         with st.container():
                             st.subheader(entry.title)
-                            st.markdown(f'🔗 <a href="{entry.link}" target="_system" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
+                            st.markdown(f'''
+    🔗 <a href="{entry.link}" 
+          target="_system" 
+          rel="noopener noreferrer"
+          style="color: #FF4B4B; text-decoration: none; font-weight: bold; font-size: 16px;">
+       Lire l'article complet
+    </a>
+''', unsafe_allow_html=True)
                             st.divider()
                 else:
                     st.info(f"Aucune actualité trouvée.")
