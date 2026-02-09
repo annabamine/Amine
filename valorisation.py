@@ -113,6 +113,7 @@ header, .stAppHeader {
 }
 </style>""", unsafe_allow_html=True)
 
+
 search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple")
 
 if search_query:
