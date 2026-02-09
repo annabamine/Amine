@@ -354,21 +354,32 @@ if ticker:
                             st.markdown(f"<h3 style='color: black !important;'>{entry.title}</h3>", unsafe_allow_html=True)
                             st.write(f"📅 Publié le : {entry.published}")
                             
-                            # --- LE BOUTON CORRIGÉ ---
-                            # On force le fond en bleu marine et le texte en blanc cassé
+                            # --- LE BOUTON VERSION FINALE ---
                             btn_html = f'''
-                                <button onclick="window.open('{entry.link}', '_blank', 'location=yes,toolbar=yes')" 
-                                        style="background-color: #001f3f !important; 
-                                               color: #FEF9ED !important; 
-                                               border: 2px solid #C0C0C0 !important; 
-                                               padding: 12px 20px; 
-                                               border-radius: 8px; 
-                                               cursor: pointer; 
-                                               font-weight: bold; 
-                                               width: 100%; 
-                                               margin-top: 10px;
-                                               font-size: 16px !important;
-                                               display: block;">
+                                <style>
+                                    .custom-btn {{
+                                        background-color: #001f3f !important;
+                                        color: #FEF9ED !important;
+                                        border: 2px solid #C0C0C0 !important;
+                                        padding: 14px 20px;
+                                        border-radius: 10px;
+                                        cursor: pointer;
+                                        font-weight: 800 !important;
+                                        width: 100%;
+                                        margin-top: 10px;
+                                        font-size: 16px !important;
+                                        display: block;
+                                        text-align: center;
+                                        text-decoration: none;
+                                        transition: background-color 0.3s;
+                                        box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
+                                    }}
+                                    .custom-btn:active {{
+                                        background-color: #003366 !important;
+                                        transform: translateY(2px);
+                                    }}
+                                </style>
+                                <button class="custom-btn" onclick="window.open('{entry.link}', '_blank', 'location=yes,toolbar=yes')">
                                     LIRE L'ARTICLE COMPLET ↗
                                 </button>
                             '''
