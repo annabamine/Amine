@@ -113,6 +113,19 @@ header, .stAppHeader {
 }
 </style>""", unsafe_allow_html=True)
 
+
+st.markdown("""
+    <style>
+        /* Cache le menu (les 3 traits) et le logo Streamlit en bas */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        
+        /* Supprime l'espace vide en bas laissé par le footer */
+        .stAppDeployButton {display:none;}
+    </style>
+""", unsafe_allow_html=True)
+
 search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple")
 
 if search_query:
