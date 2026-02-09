@@ -350,34 +350,9 @@ if ticker:
                 if feed.entries:
                     for entry in feed.entries[:10]:
                         with st.container():
-                            # Forcer le titre en noir sur ton fond beige
-                            st.markdown(f"<h3 style='color: black !important;'>{entry.title}</h3>", unsafe_allow_html=True)
+                            st.subheader(entry.title)
                             st.write(f"📅 Publié le : {entry.published}")
-                            
-                            # --- LE BOUTON VERSION "LIEN DÉGUISÉ" ---
-                            btn_html = f'''
-                                <a href="javascript:void(0)" 
-                                   onclick="window.open('{entry.link}', '_blank', 'location=yes,toolbar=yes')"
-                                   style="
-                                        display: block !important;
-                                        width: 100% !important;
-                                        background-color: #001f3f !important;
-                                        color: #FEF9ED !important;
-                                        text-align: center !important;
-                                        padding: 15px 0px !important;
-                                        text-decoration: none !important;
-                                        border-radius: 10px !important;
-                                        font-weight: bold !important;
-                                        font-size: 16px !important;
-                                        border: 2px solid #C0C0C0 !important;
-                                        box-shadow: 0px 4px 6px rgba(0,0,0,0.2) !important;
-                                        -webkit-appearance: none !important;
-                                   ">
-                                    <span style="color: #FEF9ED !important;">LIRE L'ARTICLE COMPLET ↗</span>
-                                </a>
-                            '''
-                            st.markdown(btn_html, unsafe_allow_html=True)
-                            st.markdown("<br>", unsafe_allow_html=True)
+                            st.markdown(f'🔗 <a href="{entry.link}" target="_blank" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
                             st.divider()
                 else:
                     st.info(f"Aucune actualité trouvée.")
