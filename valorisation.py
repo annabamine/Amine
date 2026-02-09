@@ -355,15 +355,7 @@ if ticker:
                         with st.container():
                             st.subheader(entry.title)
                             st.write(f"📅 Publié le : {entry.published}")
-                            st.markdown(f'''
-    <div style="margin: 10px 0;">
-        🔗 <a href="#" 
-              onclick="cordova.InAppBrowser.open('{entry.link}', '_blank', 'location=yes,toolbar=yes'); return false;" 
-              style="color: #FF4B4B; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">
-           Lire l'article complet
-        </a>
-    </div>
-''', unsafe_allow_html=True)
+                            st.markdown(f'🔗 <a href="{entry.link}" target="_blank" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
                             st.divider()
                 else:
                     st.info(f"Aucune actualité trouvée.")
