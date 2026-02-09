@@ -351,16 +351,12 @@ if ticker:
                     for entry in feed.entries[:10]:
                         with st.container():
                             st.subheader(entry.title)
-                            # UTILISATION DU BOUTON OFFICIEL POUR LA COMPATIBILITÉ APK
-                            st.link_button("Lire l'article complet", entry.link)
+                            st.markdown(f'🔗 <a href="{entry.link}" target="_system" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
                             st.divider()
                 else:
                     st.info(f"Aucune actualité trouvée.")
             except Exception as e:
                 st.error(f"Erreur news : {e}")
-
-    except Exception as e:
-        st.error(f"Erreur avec {ticker} : {e}")
 
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
