@@ -350,20 +350,30 @@ if ticker:
                 if feed.entries:
                     for entry in feed.entries[:10]:
                         with st.container():
-                            st.subheader(entry.title)
+                            # Forcer le titre en noir sur ton fond beige
+                            st.markdown(f"<h3 style='color: black !important;'>{entry.title}</h3>", unsafe_allow_html=True)
                             st.write(f"📅 Publié le : {entry.published}")
                             
-                            # --- MODIFICATION POUR MOBILE (InAppBrowser) ---
-                            # Création d'un bouton qui appelle window.open compatible Cordova
+                            # --- LE BOUTON CORRIGÉ ---
+                            # On force le fond en bleu marine et le texte en blanc cassé
                             btn_html = f'''
                                 <button onclick="window.open('{entry.link}', '_blank', 'location=yes,toolbar=yes')" 
-                                        style="background-color: #001f3f; color: #FEF9ED; border: 2px solid #C0C0C0; 
-                                               padding: 10px 20px; border-radius: 8px; cursor: pointer; 
-                                               font-weight: bold; width: 100%; margin-top: 10px;">
-                                    Lire l'article complet ↗
+                                        style="background-color: #001f3f !important; 
+                                               color: #FEF9ED !important; 
+                                               border: 2px solid #C0C0C0 !important; 
+                                               padding: 12px 20px; 
+                                               border-radius: 8px; 
+                                               cursor: pointer; 
+                                               font-weight: bold; 
+                                               width: 100%; 
+                                               margin-top: 10px;
+                                               font-size: 16px !important;
+                                               display: block;">
+                                    LIRE L'ARTICLE COMPLET ↗
                                 </button>
                             '''
                             st.markdown(btn_html, unsafe_allow_html=True)
+                            st.markdown("<br>", unsafe_allow_html=True)
                             st.divider()
                 else:
                     st.info(f"Aucune actualité trouvée.")
