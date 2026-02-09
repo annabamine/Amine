@@ -111,19 +111,7 @@ div.stNumberInput input, div.stTextInput input {
 header, .stAppHeader {
     background-color: #fffdf4 !important;
 }
-</style>
-<style>
-        /* Cache le menu (les 3 traits) et le logo Streamlit en bas */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {visibility: hidden;}
-        
-        /* Supprime l'espace vide en bas laissé par le footer */
-        .stAppDeployButton {display:none;}
-    </style>
-
-
-""", unsafe_allow_html=True)
+</style>""", unsafe_allow_html=True)
 
 
 
