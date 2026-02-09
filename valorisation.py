@@ -343,20 +343,16 @@ if ticker:
                     st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
 
         with tab4:
-            st.title(f"📰 Dernières actualités : {company_name}")
-            try:
-                rss_url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
-                feed = feedparser.parse(rss_url)
-                if feed.entries:
-                    for entry in feed.entries[:10]:
-                        with st.container():
-                            st.subheader(entry.title)
-                            st.markdown(f'🔗 <a href="{entry.link}" target="_system" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
-                            st.divider()
-                else:
-                    st.info(f"Aucune actualité trouvée.")
-            except Exception as e:
-                st.error(f"Erreur news : {e}")
+            with tab4:
+    st.title(f"📰 Dernières actualités : {company_name}")
+    # ... (ton code feedparser) ...
+    if feed.entries:
+        for entry in feed.entries[:10]:
+            st.subheader(entry.title)
+            st.write(f"📅 {entry.published}")
+            # ON UTILISE LE BOUTON OFFICIEL POUR ÉVITER LE BLOCAGE HTML
+            st.link_button("Lire l'article complet", entry.link)
+            st.divider() # C'est cette ligne qui crée les séparations de ta Photo 2)
 
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
