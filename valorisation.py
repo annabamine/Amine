@@ -113,9 +113,6 @@ header, .stAppHeader {
 }
 </style>""", unsafe_allow_html=True)
 
-
-st.link_button("Test Ouverture Système", "https://www.google.com")
-
 search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple")
 
 if search_query:
