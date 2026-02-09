@@ -352,7 +352,13 @@ if ticker:
                         with st.container():
                             st.subheader(entry.title)
                             st.write(f"📅 Publié le : {entry.published}")
-                            st.markdown(f'🔗 <a href="{entry.link}" target="_blank" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
+                            st.markdown(f'''
+    🔗 <a href="javascript:void(0)" 
+          onclick="window.open('{entry.link}', '_blank', 'location=yes,toolbar=yes')" 
+          style="color: #FF4B4B; text-decoration: none; font-weight: bold; font-size: 16px;">
+       Lire l'article complet
+    </a>
+''', unsafe_allow_html=True)
                             st.divider()
                 else:
                     st.info(f"Aucune actualité trouvée.")
