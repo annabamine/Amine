@@ -354,34 +354,27 @@ if ticker:
                             st.markdown(f"<h3 style='color: black !important;'>{entry.title}</h3>", unsafe_allow_html=True)
                             st.write(f"📅 Publié le : {entry.published}")
                             
-                            # --- LE BOUTON VERSION FINALE ---
+                            # --- LE BOUTON VERSION "LIEN DÉGUISÉ" ---
                             btn_html = f'''
-                                <style>
-                                    .custom-btn {{
+                                <a href="javascript:void(0)" 
+                                   onclick="window.open('{entry.link}', '_blank', 'location=yes,toolbar=yes')"
+                                   style="
+                                        display: block !important;
+                                        width: 100% !important;
                                         background-color: #001f3f !important;
                                         color: #FEF9ED !important;
-                                        border: 2px solid #C0C0C0 !important;
-                                        padding: 14px 20px;
-                                        border-radius: 10px;
-                                        cursor: pointer;
-                                        font-weight: 800 !important;
-                                        width: 100%;
-                                        margin-top: 10px;
+                                        text-align: center !important;
+                                        padding: 15px 0px !important;
+                                        text-decoration: none !important;
+                                        border-radius: 10px !important;
+                                        font-weight: bold !important;
                                         font-size: 16px !important;
-                                        display: block;
-                                        text-align: center;
-                                        text-decoration: none;
-                                        transition: background-color 0.3s;
-                                        box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
-                                    }}
-                                    .custom-btn:active {{
-                                        background-color: #003366 !important;
-                                        transform: translateY(2px);
-                                    }}
-                                </style>
-                                <button class="custom-btn" onclick="window.open('{entry.link}', '_blank', 'location=yes,toolbar=yes')">
-                                    LIRE L'ARTICLE COMPLET ↗
-                                </button>
+                                        border: 2px solid #C0C0C0 !important;
+                                        box-shadow: 0px 4px 6px rgba(0,0,0,0.2) !important;
+                                        -webkit-appearance: none !important;
+                                   ">
+                                    <span style="color: #FEF9ED !important;">LIRE L'ARTICLE COMPLET ↗</span>
+                                </a>
                             '''
                             st.markdown(btn_html, unsafe_allow_html=True)
                             st.markdown("<br>", unsafe_allow_html=True)
