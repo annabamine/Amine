@@ -69,27 +69,22 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# 3. Styles globaux et corrections des éléments (Cible sélective pour éviter le noir sur le titre)
+# 3. Styles globaux
 st.markdown("""
 <style>
-/* Fond de l'application */
 .stApp {
     background-color: #fffdf4;
 }
 
-/* On force le texte en noir UNIQUEMENT pour le contenu principal */
-/* On exclut la barre de navigation personnalisée */
 .stMainBlockContainer *:not(.nav-bar):not(.nav-title) {
     color: black !important;
     font-size: 15px !important;
 }
 
-/* Correction spécifique pour les onglets */
 .stTabs [data-baseweb="tab"] p {
     color: black !important;
 }
 
-/* --- CORRECTION DU MENU DÉROULANT (SELECTBOX) --- */
 div[data-baseweb="select"] > div {
     background-color: white !important;
 }
@@ -106,8 +101,6 @@ div[data-baseweb="popover"] li:hover {
 div[data-baseweb="select"] span, div[data-baseweb="select"] div {
     color: black !important;
 }
-
-/* --- FIN CORRECTION MENU --- */
 
 div.stNumberInput input, div.stTextInput input {
     background-color: white !important;
@@ -359,7 +352,18 @@ if ticker:
                         with st.container():
                             st.subheader(entry.title)
                             st.write(f"📅 Publié le : {entry.published}")
-                            st.markdown(f'🔗 <a href="{entry.link}" target="_blank" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
+                            
+                            # --- MODIFICATION POUR MOBILE (InAppBrowser) ---
+                            # Création d'un bouton qui appelle window.open compatible Cordova
+                            btn_html = f'''
+                                <button onclick="window.open('{entry.link}', '_blank', 'location=yes,toolbar=yes')" 
+                                        style="background-color: #001f3f; color: #FEF9ED; border: 2px solid #C0C0C0; 
+                                               padding: 10px 20px; border-radius: 8px; cursor: pointer; 
+                                               font-weight: bold; width: 100%; margin-top: 10px;">
+                                    Lire l'article complet ↗
+                                </button>
+                            '''
+                            st.markdown(btn_html, unsafe_allow_html=True)
                             st.divider()
                 else:
                     st.info(f"Aucune actualité trouvée.")
