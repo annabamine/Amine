@@ -346,37 +346,20 @@ if ticker:
                     st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
 
         with tab4:
-            # 1. Injection du script pour faire le pont avec l'APK
-            st.markdown('<script src="cordova.js"></script>', unsafe_allow_html=True)
-            
             st.title(f"📰 Dernières actualités : {company_name}")
-            
             try:
-                # Récupération du flux RSS
                 rss_url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
                 feed = feedparser.parse(rss_url)
-                
                 if feed.entries:
                     for entry in feed.entries[:10]:
                         with st.container():
                             st.subheader(entry.title)
-                            st.write(f"📅 Publié le : {entry.published}")
-                            
-                            # LE LIEN HYBRIDE (C'est ici que la magie opère)
-                            st.markdown(f'''
-                                🔗 <a href="{entry.link}" 
-                                      target="_blank" 
-                                      onclick="if(typeof cordova !== 'undefined'){{ cordova.InAppBrowser.open('{entry.link}', '_blank', 'location=yes,toolbar=yes'); return false; }}" 
-                                      style="color: #FF4B4B; text-decoration: none; font-weight: bold; font-size: 16px;">
-                                   Lire l'article complet
-                                </a>
-                            ''', unsafe_allow_html=True)
+                            st.markdown(f'🔗 <a href="{entry.link}" target="_system" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
                             st.divider()
                 else:
-                    st.info(f"Aucune actualité trouvée pour {ticker}.")
-                    
+                    st.info(f"Aucune actualité trouvée.")
             except Exception as e:
-                st.error(f"Erreur lors de la récupération des news : {e}")
+                st.error(f"Erreur news : {e}")
 
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
