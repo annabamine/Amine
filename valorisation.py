@@ -352,7 +352,7 @@ if ticker:
                         with st.container():
                             st.subheader(entry.title)
                             st.markdown(f'''
-<a href="#" onclick="window.open('{entry.link}', '_system'); return false;"
+<a href="{entry.link}" target="_self"
    style="color:#FF4B4B; font-weight:bold; text-decoration:none;">
    Lire l'article complet
 </a>
