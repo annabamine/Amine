@@ -427,22 +427,33 @@ if ticker:
 
             st.divider()
 
-            # 2. RÉSUMÉ DES DERNIERS RÉSULTATS (Via une autre méthode yfinance)
-            st.subheader("📊 Historique des Surprises EPS")
-            try:
-                # Cette méthode est souvent plus fiable que action.calendar
-                earn_dates = action.get_earnings_dates(limit=4)
-                if earn_dates is not None and not earn_dates.empty:
-                    # On affiche le tableau proprement
-                    df_display = earn_dates.dropna(subset=['Reported EPS']).copy()
-                    if not df_display.empty:
-                        st.table(df_display[['EPS Estimate', 'Reported EPS', 'Surprise(%)']])
-                    else:
-                        st.write("Aucun historique récent d'EPS trouvé.")
-                else:
-                    st.write("Données de résultats indisponibles pour ce ticker.")
-            except:
-                st.write("Impossible de charger le tableau des résultats.")
+            # 2. RÉSUMÉ DU DERNIER RÉSULTAT (Données directes)
+            st.subheader("📊 Dernier Résultat vs Estimations")
+            
+            eps_actual = infos.get('trailingEps', 'N/A')
+            eps_estimate = infos.get('earningsQuarterlyEarnings', 'N/A') # Estimation
+            
+            # On essaye de récupérer la "Surprise" si elle existe
+            col_s1, col_s2, col_s3 = st.columns(3)
+            
+            with col_s1:
+                st.write("**EPS Réalisé (TTM)**")
+                st.write(f"{eps_actual} {devise}")
+            
+            with col_s2:
+                # On affiche l'objectif des analystes (Target Price) pour donner une idée du sentiment
+                target = infos.get('targetMeanPrice', 'N/A')
+                st.write("**Objectif Analystes**")
+                st.write(f"{target} {devise}")
+                
+            with col_s3:
+                # Recommandation moyenne
+                reco = infos.get('recommendationKey', 'N/A').upper()
+                st.write("**Avis Global**")
+                st.write(f" {reco}")
+
+            st.info("💡 Note : Le tableau historique complet est temporairement indisponible sur les serveurs de Yahoo Finance.")
+
 
             # 3. DIVIDENDE RÉCENT (Preuve réelle)
             st.subheader("💰 Derniers Versements")
