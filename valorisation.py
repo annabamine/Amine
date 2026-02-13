@@ -5,22 +5,19 @@ import feedparser
 import base64
 import requests
 
-def get_fmp_financials_v3(ticker, api_key):
+def get_fmp_basic_financials(ticker, api_key):
     ticker = ticker.upper()
-    # Ce lien v3 est généralement plus accessible pour les nouveaux comptes
-    url = f"https://financialmodelingprep.com/api/v3/financial-reports-json?symbol={ticker}&year=2024&period=FY&apikey={api_key}"
-    
-    # Si le lien ci-dessus est trop complexe, on utilise le ratio-ttm qui donne les derniers chiffres
-    url_alt = f"https://financialmodelingprep.com/api/v3/income-statement/{ticker}?limit=1&apikey={api_key}"
+    # Cet endpoint 'quote' est le plus stable et reste gratuit
+    url = f"https://financialmodelingprep.com/api/v3/quote/{ticker}?apikey={api_key}"
     
     try:
-        response = requests.get(url_alt, timeout=10)
+        response = requests.get(url, timeout=10)
         if response.status_code == 200:
             data = response.json()
             if data and len(data) > 0:
                 return data[0]
-    except Exception as e:
-        st.error(f"Erreur technique : {e}")
+    except:
+        pass
     return None
 
 
@@ -420,41 +417,52 @@ if ticker:
 
 
         with tab5:
-            st.title("🎙️ Earnings & Résultats")
+            st.title("🎙️ Earnings & Chiffres Clés")
             fmp_key = "mmAvgD5gdIBcSLVP1tfPmvohVTFpyEQI"
             ticker_pur = ticker.split(" - ")[0].strip().upper()
 
-            # 1. On va chercher les chiffres financiers
-            data_fiscale = get_fmp_financials_v3(ticker_pur, fmp_key)
+            # On utilise la fonction 'quote' qui contient des données financières
+            basic_data = get_fmp_basic_financials(ticker_pur, fmp_key)
             
-            if data_fiscale:
-                date_pub = data_fiscale.get('date', 'N/A')
-                rev = data_fiscale.get('revenue', 0)
-                net = data_fiscale.get('netIncome', 0)
-                nom_rapport = f"{data_fiscale.get('period', 'Q')} {data_fiscale.get('calendarYear', '')}"
-                
-                st.subheader(f"📊 Résultats {nom_rapport}")
-                st.markdown(f"📅 Date de publication : **{date_pub}**")
+            if basic_data:
+                # FMP donne EPS et d'autres ratios dans la quote
+                st.subheader(f"📊 Indicateurs de Performance")
                 
                 col_e1, col_e2 = st.columns(2)
                 with col_e1:
-                    st.metric("Revenue", format_valeur(rev, devise))
+                    eps_val = basic_data.get('eps', 'N/A')
+                    st.metric("Earnings Per Share (EPS)", f"{eps_val} {devise}")
                 with col_e2:
-                    st.metric("Net Income", format_valeur(net, devise))
+                    # On affiche le volume ou une autre info gratuite
+                    shares = basic_data.get('sharesOutstanding', 0)
+                    st.metric("Actions en circulation", format_valeur(shares, ""))
+
+                st.info("💡 Note : Les rapports trimestriels détaillés (Revenue/Net Income) via API sont désormais limités aux comptes Premium par FMP.")
+                
+                # Astuce : On récupère la date du prochain earnings via Yahoo (plus fiable que FMP Free)
+                next_earnings = infos.get('earningsTimestamp')
+                if next_earnings:
+                    from datetime import datetime
+                    date_e = datetime.fromtimestamp(next_earnings).strftime('%d/%m/%Y')
+                    st.write(f"📅 **Prochaine annonce prévue le :** {date_e}")
             else:
-                st.warning("⚠️ Les chiffres financiers ne sont pas accessibles avec ce plan API.")
+                st.error("Impossible de récupérer les données. Vérifie ta connexion.")
 
             st.divider()
+            st.subheader("📰 Dernier Transcript (Résumé)")
+            st.write("Le transcript complet nécessite un plan payant. Voici les dernières actus liées aux earnings :")
+            # Petit rappel des news filtrées sur le mot "Earnings"
+            rss_url = f"https://finance.yahoo.com/rss/headline?s={ticker_pur}"
+            feed = feedparser.parse(rss_url)
+            found_news = False
+            for entry in feed.entries:
+                if "earnings" in entry.title.lower() or "results" in entry.title.lower():
+                    st.markdown(f"🔔 **[{entry.title}]({entry.link})**")
+                    found_news = True
+            if not found_news:
+                st.write("Aucune news spécifique aux derniers résultats trouvée.")
 
-            # 2. On tente quand même le transcript (souvent limité sur Free)
-            st.subheader("💡 Transcript & Analyse")
-            transcript_data = get_fmp_transcript(ticker_pur, fmp_key)
             
-            if transcript_data:
-                with st.expander("📖 Lire le compte-rendu du Call"):
-                    st.write(transcript_data.get('content', ''))
-            else:
-                st.info("Le transcript détaillé est réservé aux comptes Premium FMP, mais tu as les chiffres ci-dessus ! 👆")
 
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
