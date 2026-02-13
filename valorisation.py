@@ -3,38 +3,6 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import feedparser
 import base64
-import requests
-
-def get_fmp_basic_financials(ticker, api_key):
-    ticker = ticker.upper()
-    # Cet endpoint 'quote' est le plus stable et reste gratuit
-    url = f"https://financialmodelingprep.com/api/v3/quote/{ticker}?apikey={api_key}"
-    
-    try:
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data and len(data) > 0:
-                return data[0]
-    except:
-        pass
-    return None
-
-def get_fmp_transcript(ticker, api_key):
-    ticker = ticker.upper()
-    # On récupère le dernier transcript disponible
-    url = f"https://financialmodelingprep.com/api/v3/earning_call_transcript/{ticker}?limit=1&apikey={api_key}"
-    
-    try:
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data and len(data) > 0:
-                return data[0] # Contient 'content', 'date', etc.
-    except:
-        pass
-    return None
-
 
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
@@ -248,7 +216,7 @@ if ticker:
             else:
                return f"{valeur / 1_000_000:,.2f} M {devise}"
         
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🔢 Ratios", "📊 Valorisation", "💰 Prix d'entrée", "📰 Actualités", "🎙️ Earnings"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🔢 Ratios", "📊 Valorisation", "💰 Prix d'entrée", "📰 Actualités", "🎙️ Calendrier & Dividendes"])
         
         with tab1:
             st.title("🔢 Ratios financiers")
@@ -432,50 +400,55 @@ if ticker:
 
 
         with tab5:
-            st.title("🎙️ Earnings & Chiffres Clés")
-            fmp_key = "mmAvgD5gdIBcSLVP1tfPmvohVTFpyEQI"
-            ticker_pur = ticker.split(" - ")[0].strip().upper()
-
-            # On utilise la fonction 'quote' qui contient des données financières
-            basic_data = get_fmp_basic_financials(ticker_pur, fmp_key)
+            st.title("🎙️ Calendrier & Dividendes")
             
-            if basic_data:
-                # FMP donne EPS et d'autres ratios dans la quote
-                st.subheader(f"📊 Indicateurs de Performance")
+            try:
+                # 1. RÉCUPÉRATION DES DATES D'EARNINGS
+                cal = action.calendar
+                if cal is not None and not cal.empty:
+                    # 'Earnings Date' est souvent une liste de deux dates (fourchette)
+                    e_dates = cal.get('Earnings Date', [])
+                    if e_dates:
+                        prochain_e = e_dates[0].strftime('%d/%m/%Y')
+                        st.info(f"📅 **Prochains Earnings prévus :** {prochain_e}")
                 
-                col_e1, col_e2 = st.columns(2)
-                with col_e1:
-                    eps_val = basic_data.get('eps', 'N/A')
-                    st.metric("Earnings Per Share (EPS)", f"{eps_val} {devise}")
-                with col_e2:
-                    # On affiche le volume ou une autre info gratuite
-                    shares = basic_data.get('sharesOutstanding', 0)
-                    st.metric("Actions en circulation", format_valeur(shares, ""))
-
-                st.info("💡 Note : Les rapports trimestriels détaillés (Revenue/Net Income) via API sont désormais limités aux comptes Premium par FMP.")
+                # 2. RÉCUPÉRATION DES DATES DE DIVIDENDES
+                # On cherche dans l'objet infos qui est le plus complet
+                div_date = infos.get('dividendDate') # Timestamp
+                ex_div_date = infos.get('exDividendDate') # Timestamp
                 
-                # Astuce : On récupère la date du prochain earnings via Yahoo (plus fiable que FMP Free)
-                next_earnings = infos.get('earningsTimestamp')
-                if next_earnings:
-                    from datetime import datetime
-                    date_e = datetime.fromtimestamp(next_earnings).strftime('%d/%m/%Y')
-                    st.write(f"📅 **Prochaine annonce prévue le :** {date_e}")
-            else:
-                st.error("Impossible de récupérer les données. Vérifie ta connexion.")
+                from datetime import datetime
+                
+                col_d1, col_d2 = st.columns(2)
+                with col_d1:
+                    if ex_div_date:
+                        dt_ex = datetime.fromtimestamp(ex_div_date).strftime('%d/%m/%Y')
+                        st.metric("Détachement Dividende", dt_ex)
+                    else:
+                        st.write("🚫 **Détachement** : N/A")
+                
+                with col_d2:
+                    if div_date:
+                        dt_div = datetime.fromtimestamp(div_date).strftime('%d/%m/%Y')
+                        st.metric("Versement Dividende", dt_div)
+                    else:
+                        st.write("🚫 **Versement** : N/A")
 
-            st.divider()
-            st.subheader("📰 Dernier Transcript (Résumé)")
-            st.write("Le transcript complet nécessite un plan payant. Voici les dernières actus liées aux earnings :")
-            # Petit rappel des news filtrées sur le mot "Earnings"
-            rss_url = f"https://finance.yahoo.com/rss/headline?s={ticker_pur}"
-            feed = feedparser.parse(rss_url)
-            found_news = False
-            for entry in feed.entries:
-                if "earnings" in entry.title.lower() or "results" in entry.title.lower():
-                    st.markdown(f"🔔 **[{entry.title}]({entry.link})**")
-                    found_news = True
-            if not found_news:
-                st.write("Aucune news spécifique aux derniers résultats trouvée.")
+                st.divider()
+
+                # 3. RÉSUMÉ DES DERNIERS RÉSULTATS (Les chiffres réels vs prévisions)
+                st.subheader("📊 Derniers Résultats (vs Estimations)")
+                earnings_history = action.get_earnings_dates(limit=4)
+                if earnings_history is not None and not earnings_history.empty:
+                    # On nettoie pour l'affichage
+                    history_display = earnings_history.dropna(subset=['Reported EPS'])
+                    if not history_display.empty:
+                        st.dataframe(history_display[['EPS Estimate', 'Reported EPS', 'Surprise(%)']], use_container_width=True)
+                    else:
+                        st.write("Données historiques d'EPS non disponibles.")
+                
+            except Exception as e:
+                st.warning("Certaines dates ne sont pas disponibles pour ce ticker.")
 
             
 
