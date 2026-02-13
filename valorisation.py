@@ -402,53 +402,56 @@ if ticker:
         with tab5:
             st.title("🎙️ Calendrier & Dividendes")
             
+            # 1. RÉCUPÉRATION DES DATES (Via 'infos' qui est plus stable que 'calendar')
+            next_earn_ts = infos.get('earningsTimestamp') # Prochain Earnings
+            div_date_ts = infos.get('dividendDate')       # Versement
+            ex_div_ts = infos.get('exDividendDate')      # Détachement
+            
+            from datetime import datetime
+
+            def format_ts(ts):
+                if ts:
+                    return datetime.fromtimestamp(ts).strftime('%d/%m/%Y')
+                return "N/A"
+
+            # Affichage des dates clés
+            st.subheader("📅 Dates à surveiller")
+            c1, c2, c3 = st.columns(3)
+            
+            with c1:
+                st.metric("Prochains Earnings", format_ts(next_earn_ts))
+            with c2:
+                st.metric("Détachement Div.", format_ts(ex_div_ts))
+            with c3:
+                st.metric("Versement Div.", format_ts(div_date_ts))
+
+            st.divider()
+
+            # 2. RÉSUMÉ DES DERNIERS RÉSULTATS (Via une autre méthode yfinance)
+            st.subheader("📊 Historique des Surprises EPS")
             try:
-                # 1. RÉCUPÉRATION DES DATES D'EARNINGS
-                cal = action.calendar
-                if cal is not None and not cal.empty:
-                    # 'Earnings Date' est souvent une liste de deux dates (fourchette)
-                    e_dates = cal.get('Earnings Date', [])
-                    if e_dates:
-                        prochain_e = e_dates[0].strftime('%d/%m/%Y')
-                        st.info(f"📅 **Prochains Earnings prévus :** {prochain_e}")
-                
-                # 2. RÉCUPÉRATION DES DATES DE DIVIDENDES
-                # On cherche dans l'objet infos qui est le plus complet
-                div_date = infos.get('dividendDate') # Timestamp
-                ex_div_date = infos.get('exDividendDate') # Timestamp
-                
-                from datetime import datetime
-                
-                col_d1, col_d2 = st.columns(2)
-                with col_d1:
-                    if ex_div_date:
-                        dt_ex = datetime.fromtimestamp(ex_div_date).strftime('%d/%m/%Y')
-                        st.metric("Détachement Dividende", dt_ex)
+                # Cette méthode est souvent plus fiable que action.calendar
+                earn_dates = action.get_earnings_dates(limit=4)
+                if earn_dates is not None and not earn_dates.empty:
+                    # On affiche le tableau proprement
+                    df_display = earn_dates.dropna(subset=['Reported EPS']).copy()
+                    if not df_display.empty:
+                        st.table(df_display[['EPS Estimate', 'Reported EPS', 'Surprise(%)']])
                     else:
-                        st.write("🚫 **Détachement** : N/A")
-                
-                with col_d2:
-                    if div_date:
-                        dt_div = datetime.fromtimestamp(div_date).strftime('%d/%m/%Y')
-                        st.metric("Versement Dividende", dt_div)
-                    else:
-                        st.write("🚫 **Versement** : N/A")
+                        st.write("Aucun historique récent d'EPS trouvé.")
+                else:
+                    st.write("Données de résultats indisponibles pour ce ticker.")
+            except:
+                st.write("Impossible de charger le tableau des résultats.")
 
-                st.divider()
-
-                # 3. RÉSUMÉ DES DERNIERS RÉSULTATS (Les chiffres réels vs prévisions)
-                st.subheader("📊 Derniers Résultats (vs Estimations)")
-                earnings_history = action.get_earnings_dates(limit=4)
-                if earnings_history is not None and not earnings_history.empty:
-                    # On nettoie pour l'affichage
-                    history_display = earnings_history.dropna(subset=['Reported EPS'])
-                    if not history_display.empty:
-                        st.dataframe(history_display[['EPS Estimate', 'Reported EPS', 'Surprise(%)']], use_container_width=True)
-                    else:
-                        st.write("Données historiques d'EPS non disponibles.")
-                
-            except Exception as e:
-                st.warning("Certaines dates ne sont pas disponibles pour ce ticker.")
+            # 3. DIVIDENDE RÉCENT (Preuve réelle)
+            st.subheader("💰 Derniers Versements")
+            divs = action.dividends
+            if not divs.empty:
+                last_divs = divs.tail(3).sort_index(ascending=False)
+                st.write(last_divs)
+            else:
+                st.write("Cette entreprise ne verse pas de dividendes.")
 
             
 
