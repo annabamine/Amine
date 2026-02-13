@@ -216,7 +216,7 @@ if ticker:
             else:
                return f"{valeur / 1_000_000:,.2f} M {devise}"
         
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🔢 Ratios", "📊 Valorisation", "💰 Prix d'entrée", "📰 Actualités", "🎙️ Calendrier & Dividendes"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🔢 Ratios", "📊 Valorisation", "💰 Prix d'entrée", "🎙️ Calendrier & Dividendes", "📰 Actualités"])
         
         with tab1:
             st.title("🔢 Ratios financiers")
@@ -382,24 +382,8 @@ if ticker:
                 else:
                     st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
 
+        
         with tab4:
-            st.title(f"📰 Dernières actualités : {company_name}")
-            try:
-                rss_url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
-                feed = feedparser.parse(rss_url)
-                if feed.entries:
-                    for entry in feed.entries[:10]:
-                        with st.container():
-                            st.subheader(entry.title)
-                            st.markdown(f'🔗 <a href="{entry.link}" target="_system" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
-                            st.divider()
-                else:
-                    st.info(f"Aucune actualité trouvée.")
-            except Exception as e:
-                st.error(f"Erreur news : {e}")
-
-
-        with tab5:
             st.title("🎙️ Calendrier & Dividendes")
             
             # 1. RÉCUPÉRATION DES DATES (Via 'infos' qui est plus stable que 'calendar')
@@ -461,6 +445,23 @@ if ticker:
                 st.write(last_divs)
             else:
                 st.write("Cette entreprise ne verse pas de dividendes.")
+
+  
+        with tab5:
+            st.title(f"📰 Dernières actualités : {company_name}")
+            try:
+                rss_url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
+                feed = feedparser.parse(rss_url)
+                if feed.entries:
+                    for entry in feed.entries[:10]:
+                        with st.container():
+                            st.subheader(entry.title)
+                            st.markdown(f'🔗 <a href="{entry.link}" target="_system" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
+                            st.divider()
+                else:
+                    st.info(f"Aucune actualité trouvée.")
+            except Exception as e:
+                st.error(f"Erreur news : {e}")
 
             
 
