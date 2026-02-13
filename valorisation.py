@@ -3,6 +3,29 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import feedparser
 import base64
+import requests
+
+def get_fmp_earnings_data(ticker, api_key):
+    # On force le ticker en majuscules
+    ticker = ticker.upper()
+    url = f"https://financialmodelingprep.com/api/v3/income-statement/{ticker}?period=quarter&limit=1&apikey={api_key}"
+    
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data and len(data) > 0:
+                return data[0]
+            else:
+                st.warning(f"FMP n'a pas de données trimestrielles pour {ticker}")
+        elif response.status_code == 403:
+            st.error("Clé API invalide ou quota dépassé (Erreur 403)")
+        else:
+            st.error(f"Erreur API FMP : {response.status_code}")
+    except Exception as e:
+        st.error(f"Erreur de connexion : {e}")
+    return None
+
 
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
@@ -400,45 +423,32 @@ if ticker:
 
 
         with tab5:
-            st.title(f"🎙️ Derniers Résultats : {company_name}")
+            st.title(f"🎙️ Résultats Trimestriels")
             
-            try:
-                # Récupération de la date du prochain/dernier earnings
-                cal = action.calendar
-                if cal is not None and not cal.empty:
-                    # On cherche la date (souvent dans 'Earnings Date')
-                    e_date = cal.iloc[0, 0].strftime('%d/%m/%Y')
-                    st.info(f"📅 Prochaine/Dernière publication : **{e_date}**")
+            # Ta clé bien entourée de guillemets
+            fmp_key = "mmAvgD5gdIBcSLVP1tfPmvohVTFpyEQI" 
+            
+            if ticker:
+                e_data = get_fmp_earnings_data(ticker, fmp_key)
                 
-                # Affichage des derniers chiffres (Revenu et Net Income)
-                df_fin = action.financials
-                if not df_fin.empty:
-                    latest_date = df_fin.columns[0]
-                    revenue = df_fin.loc['Total Revenue'].iloc[0]
-                    net_income = df_fin.loc['Net Income'].iloc[0]
+                if e_data:
+                    # On récupère les valeurs
+                    periode = e_data.get('period', 'N/A')
+                    annee = e_data.get('calendarYear', 'N/A')
+                    date_publi = e_data.get('date', 'N/A')
+                    rev = e_data.get('revenue', 0)
+                    net = e_data.get('netIncome', 0)
+                    
+                    st.subheader(f"📊 Rapport {periode} {annee}")
+                    st.markdown(f"📅 Publié le : **{date_publi}**")
                     
                     col_e1, col_e2 = st.columns(2)
                     with col_e1:
-                        st.metric("Revenue (Dernier an)", format_valeur(revenue, devise))
+                        st.metric("Revenue", format_valeur(rev, devise))
                     with col_e2:
-                        st.metric("Net Income (Dernier an)", format_valeur(net_income, devise))
-                
-                st.divider()
-                st.subheader("💡 Highlights (Points clés)")
-                
-                # Ici, on prépare la place pour l'API Financial Modeling Prep
-                st.write("*Cette section sera alimentée par le transcript officiel via FMP.*")
-                
-                # Simulation de ce qu'on va aller chercher demain :
-                with st.expander("🔍 Voir les points clés extraits"):
-                    st.markdown("""
-                    - **Guidance** : Les prévisions pour 2026 sont en hausse de 5%.
-                    - **Marges** : Amélioration de 200 bps grâce à l'IA.
-                    - **Dividende** : Augmentation confirmée du rachat d'actions.
-                    """)
-
-            except Exception as e:
-                st.warning("Données Earnings détaillées non disponibles pour le moment.")
+                        st.metric("Net Income", format_valeur(net, devise))
+                else:
+                    st.info("Aucune donnée trouvée pour ce ticker sur FMP.")
 
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
