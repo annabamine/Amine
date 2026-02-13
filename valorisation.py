@@ -136,8 +136,32 @@ if ticker:
     try:
         action = yf.Ticker(ticker)
         infos = action.info
-        devise = infos.get("currencySymbol") or infos.get("currency")
-        prix = infos.get("currentPrice", "Non dispo")
+
+        devise = infos.get("currencySymbol") or infos.get("currency") or ""
+        prix = infos.get("currentPrice", 0)
+
+        # --- CALCULS DE PERFORMANCE ---
+        prev_close = infos.get("regularMarketPreviousClose")
+        if isinstance(prix, (int, float)) and prev_close:
+            day_change = ((prix - prev_close) / prev_close) * 100
+            day_color = "green" if day_change >= 0 else "red"
+            day_text = f"({day_change:+.2f}%)"
+        else:
+            day_text = ""
+            day_color = "black"
+
+        # Performance Year To Date (YTD)
+        try:
+            hist_ytd = action.history(period="ytd")
+            if not hist_ytd.empty:
+                price_jan_1st = hist_ytd['Close'].iloc[0]
+                ytd_change = ((prix - price_jan_1st) / price_jan_1st) * 100
+                ytd_text = f"{ytd_change:+.2f}% YTD"
+            else:
+                ytd_text = "N/A YTD"
+        except:
+            ytd_text = "N/A YTD"
+
         eps = infos.get("trailingEps", "Non dispo")
         per = infos.get("trailingPE", "Non dispo")
         fper = infos.get("forwardPE", "Non dispo")
@@ -160,7 +184,19 @@ if ticker:
         with st.expander("📄 Résumé de l'entreprise (Yahoo Finance)"):
             st.write(summary)
 
-        st.write(f"**Prix actuel** : {prix} {devise}")
+        # Affichage stylisé du prix et des performances
+        st.markdown(f"""
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; color: black;">
+                <span>
+                    Prix actuel : {prix} {devise} 
+                    <span style="color: {day_color}; margin-left: 10px;">{day_text}</span>
+                </span>
+                <span style="color: gray; font-size: 16px;">
+                    {ytd_text}
+                </span>
+            </div>
+            <hr style="margin-top: 5px; margin-bottom: 15px;">
+        """, unsafe_allow_html=True)
 
         market_cap = infos.get("marketCap")
         if market_cap is not None:
@@ -352,7 +388,7 @@ if ticker:
                     for entry in feed.entries[:10]:
                         with st.container():
                             st.subheader(entry.title)
-                            st.markdown(f'🔗 <a href="{entry.link}" target="_system" style="color: #FF4B4B; text-decoration: none; font-weight: bold;">Lire l\'article complet</a>', unsafe_allow_html=True)
+                            st.link_button("Lire l'article complet", entry.link)
                             st.divider()
                 else:
                     st.info(f"Aucune actualité trouvée.")
