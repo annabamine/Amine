@@ -185,11 +185,12 @@ if ticker:
             st.write(summary)
 
         # Affichage stylisé du prix et des performances
+        # Affichage stylisé du prix et des performances (Prix non gras)
         st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; color: black;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 18px; color: black;">
                 <span>
-                    Prix actuel : {prix} {devise} 
-                    <span style="color: {day_color}; margin-left: 10px;">{day_text}</span>
+                    <strong>Prix actuel :</strong> {prix} {devise} 
+                    <span style="color: {day_color}; margin-left: 10px; font-weight: bold;">{day_text}</span>
                 </span>
                 <span style="color: gray; font-size: 16px;">
                     {ytd_text}
