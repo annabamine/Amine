@@ -145,7 +145,7 @@ if ticker:
         if isinstance(prix, (int, float)) and prev_close:
             day_change = ((prix - prev_close) / prev_close) * 100
             day_color = "green" if day_change >= 0 else "red"
-            day_text = f"({day_change:+.2f}%)"
+            day_text = f"({day_change:+.2f}% Today)"
         else:
             day_text = ""
             day_color = "black"
@@ -184,19 +184,22 @@ if ticker:
         with st.expander("📄 Résumé de l'entreprise (Yahoo Finance)"):
             st.write(summary)
 
-        # Affichage stylisé du prix et des performances
+        # Affichage stylisé (Prix normal, Variations + Today en gras)
         st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; color: black;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 18px; color: black;">
                 <span>
-                    Prix actuel : {prix} {devise} 
-                    <span style="color: {day_color}; margin-left: 10px;">{day_text}</span>
+                    <strong>Prix actuel :</strong> {prix} {devise} 
+                    <span style="color: {day_color}; margin-left: 10px; font-weight: bold;">
+                        {day_text}
+                    </span>
                 </span>
-                <span style="color: gray; font-size: 16px;">
+                <span style="color: gray; font-size: 16px; font-weight: bold;">
                     {ytd_text}
                 </span>
             </div>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
         """, unsafe_allow_html=True)
+
 
         market_cap = infos.get("marketCap")
         if market_cap is not None:
