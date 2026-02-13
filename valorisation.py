@@ -3,6 +3,39 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import feedparser
 import base64
+import requests
+
+def get_fmp_earnings_data(ticker, api_key):
+    ticker = ticker.upper()
+    # On passe en v4 pour être compatible avec ton nouveau compte
+    url = f"https://financialmodelingprep.com/api/v4/income-statement-growth/{ticker}?apikey={api_key}"
+    
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data and len(data) > 0:
+                return data[0]
+        elif response.status_code == 403:
+            st.error("Accès refusé : Vérifie si l'abonnement Free couvre cet export v4")
+    except Exception as e:
+        st.error(f"Erreur : {e}")
+    return None
+
+def get_fmp_transcript(ticker, api_key):
+    ticker = ticker.upper()
+    # On récupère le dernier transcript disponible
+    url = f"https://financialmodelingprep.com/api/v3/earning_call_transcript/{ticker}?limit=1&apikey={api_key}"
+    
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data and len(data) > 0:
+                return data[0] # Contient 'content', 'date', etc.
+    except:
+        pass
+    return None
 
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
@@ -216,7 +249,7 @@ if ticker:
             else:
                return f"{valeur / 1_000_000:,.2f} M {devise}"
         
-        tab1, tab2, tab3, tab4 = st.tabs(["🔢 Ratios", "📊 Méthode 1", "💰 Méthode 2", "📰 Actualités"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🔢 Ratios", "📊 Valorisation", "💰 Prix d'entrée", "📰 Actualités", "🎙️ Earnings"])
         
         with tab1:
             st.title("🔢 Ratios financiers")
@@ -397,6 +430,31 @@ if ticker:
                     st.info(f"Aucune actualité trouvée.")
             except Exception as e:
                 st.error(f"Erreur news : {e}")
+
+
+        with tab5:
+            st.title("🎙️ Earnings & Conf Call")
+            fmp_key = "mmAvgD5gdIBcSLVP1tfPmvohVTFpyEQI"
+            ticker_pur = ticker.split(" - ")[0].strip().upper()
+
+            # 1. Récupération du Transcript (Le plus intéressant)
+            transcript_data = get_fmp_transcript(ticker_pur, fmp_key)
+            
+            if transcript_data:
+                st.subheader(f"📢 Transcript du dernier call ({transcript_data.get('date')})")
+                
+                # On affiche un petit morceau du texte ou le tout dans un expander
+                texte_complet = transcript_data.get('content', '')
+                
+                # Petit hack : On prend les 1000 premiers caractères pour un "aperçu"
+                st.markdown("### 💡 Points clés extraits")
+                preview = texte_complet[:1500] + "..."
+                st.write(preview)
+                
+                with st.expander("📖 Lire l'intégralité du Transcript (Texte brut)"):
+                    st.text(texte_complet)
+            else:
+                st.info("Transcript non disponible pour ce ticker sur le plan gratuit.")
 
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
