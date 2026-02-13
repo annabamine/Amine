@@ -452,9 +452,7 @@ if ticker:
                 st.write("**Avis Global**")
                 st.write(f" {reco}")
 
-            st.info("💡 Note : Le tableau historique complet est temporairement indisponible sur les serveurs de Yahoo Finance.")
-
-
+            
             # 3. DIVIDENDE RÉCENT (Preuve réelle)
             st.subheader("💰 Derniers Versements")
             divs = action.dividends
