@@ -145,7 +145,7 @@ if ticker:
         if isinstance(prix, (int, float)) and prev_close:
             day_change = ((prix - prev_close) / prev_close) * 100
             day_color = "green" if day_change >= 0 else "red"
-            day_text = f"({day_change:+.2f}%)"
+            day_text = f"({day_change:+.2f}% Today)"
         else:
             day_text = ""
             day_color = "black"
@@ -185,13 +185,13 @@ if ticker:
             st.write(summary)
 
 
-        # Affichage stylisé (Prix normal, Variations en gras + Today)
+        # Affichage stylisé 
         st.markdown(f"""
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 18px; color: black;">
                 <span>
                     <strong>Prix actuel :</strong> {prix} {devise} 
                     <span style="color: {day_color}; margin-left: 10px; font-weight: bold;">
-                        {day_text} <span style="font-size: 14px; font-weight: normal; color: gray;">Today</span>
+                        {day_text}
                     </span>
                 </span>
                 <span style="color: gray; font-size: 16px; font-weight: bold;">
