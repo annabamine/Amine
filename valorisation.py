@@ -5,37 +5,24 @@ import feedparser
 import base64
 import requests
 
-def get_fmp_earnings_data(ticker, api_key):
+def get_fmp_financials_v3(ticker, api_key):
     ticker = ticker.upper()
-    # On passe en v4 pour être compatible avec ton nouveau compte
-    url = f"https://financialmodelingprep.com/api/v4/income-statement-growth/{ticker}?apikey={api_key}"
+    # Ce lien v3 est généralement plus accessible pour les nouveaux comptes
+    url = f"https://financialmodelingprep.com/api/v3/financial-reports-json?symbol={ticker}&year=2024&period=FY&apikey={api_key}"
+    
+    # Si le lien ci-dessus est trop complexe, on utilise le ratio-ttm qui donne les derniers chiffres
+    url_alt = f"https://financialmodelingprep.com/api/v3/income-statement/{ticker}?limit=1&apikey={api_key}"
     
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url_alt, timeout=10)
         if response.status_code == 200:
             data = response.json()
             if data and len(data) > 0:
                 return data[0]
-        elif response.status_code == 403:
-            st.error("Accès refusé : Vérifie si l'abonnement Free couvre cet export v4")
     except Exception as e:
-        st.error(f"Erreur : {e}")
+        st.error(f"Erreur technique : {e}")
     return None
 
-def get_fmp_transcript(ticker, api_key):
-    ticker = ticker.upper()
-    # On récupère le dernier transcript disponible
-    url = f"https://financialmodelingprep.com/api/v3/earning_call_transcript/{ticker}?limit=1&apikey={api_key}"
-    
-    try:
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data and len(data) > 0:
-                return data[0] # Contient 'content', 'date', etc.
-    except:
-        pass
-    return None
 
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
@@ -433,28 +420,41 @@ if ticker:
 
 
         with tab5:
-            st.title("🎙️ Earnings & Conf Call")
+            st.title("🎙️ Earnings & Résultats")
             fmp_key = "mmAvgD5gdIBcSLVP1tfPmvohVTFpyEQI"
             ticker_pur = ticker.split(" - ")[0].strip().upper()
 
-            # 1. Récupération du Transcript (Le plus intéressant)
+            # 1. On va chercher les chiffres financiers
+            data_fiscale = get_fmp_financials_v3(ticker_pur, fmp_key)
+            
+            if data_fiscale:
+                date_pub = data_fiscale.get('date', 'N/A')
+                rev = data_fiscale.get('revenue', 0)
+                net = data_fiscale.get('netIncome', 0)
+                nom_rapport = f"{data_fiscale.get('period', 'Q')} {data_fiscale.get('calendarYear', '')}"
+                
+                st.subheader(f"📊 Résultats {nom_rapport}")
+                st.markdown(f"📅 Date de publication : **{date_pub}**")
+                
+                col_e1, col_e2 = st.columns(2)
+                with col_e1:
+                    st.metric("Revenue", format_valeur(rev, devise))
+                with col_e2:
+                    st.metric("Net Income", format_valeur(net, devise))
+            else:
+                st.warning("⚠️ Les chiffres financiers ne sont pas accessibles avec ce plan API.")
+
+            st.divider()
+
+            # 2. On tente quand même le transcript (souvent limité sur Free)
+            st.subheader("💡 Transcript & Analyse")
             transcript_data = get_fmp_transcript(ticker_pur, fmp_key)
             
             if transcript_data:
-                st.subheader(f"📢 Transcript du dernier call ({transcript_data.get('date')})")
-                
-                # On affiche un petit morceau du texte ou le tout dans un expander
-                texte_complet = transcript_data.get('content', '')
-                
-                # Petit hack : On prend les 1000 premiers caractères pour un "aperçu"
-                st.markdown("### 💡 Points clés extraits")
-                preview = texte_complet[:1500] + "..."
-                st.write(preview)
-                
-                with st.expander("📖 Lire l'intégralité du Transcript (Texte brut)"):
-                    st.text(texte_complet)
+                with st.expander("📖 Lire le compte-rendu du Call"):
+                    st.write(transcript_data.get('content', ''))
             else:
-                st.info("Transcript non disponible pour ce ticker sur le plan gratuit.")
+                st.info("Le transcript détaillé est réservé aux comptes Premium FMP, mais tu as les chiffres ci-dessus ! 👆")
 
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
