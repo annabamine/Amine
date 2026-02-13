@@ -3,42 +3,6 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import feedparser
 import base64
-import requests
-
-def get_fmp_earnings_data(ticker, api_key):
-    ticker = ticker.upper()
-    # On passe en v4 pour être compatible avec ton nouveau compte
-    url = f"https://financialmodelingprep.com/api/v4/income-statement-growth/{ticker}?apikey={api_key}"
-    
-    try:
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data and len(data) > 0:
-                return data[0]
-        elif response.status_code == 403:
-            st.error("Accès refusé : Vérifie si l'abonnement Free couvre cet export v4")
-    except Exception as e:
-        st.error(f"Erreur : {e}")
-    return None
-
-
-def get_fmp_transcript(ticker, api_key):
-    ticker = ticker.upper()
-    # On récupère le dernier transcript disponible
-    url = f"https://financialmodelingprep.com/api/v3/earning_call_transcript/{ticker}?limit=1&apikey={api_key}"
-    
-    try:
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data and len(data) > 0:
-                return data[0] # Contient 'content', 'date', etc.
-    except:
-        pass
-    return None
-
-
 
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
@@ -181,7 +145,7 @@ if ticker:
         if isinstance(prix, (int, float)) and prev_close:
             day_change = ((prix - prev_close) / prev_close) * 100
             day_color = "green" if day_change >= 0 else "red"
-            day_text = f"({day_change:+.2f}% Today)"
+            day_text = f"({day_change:+.2f}%)"
         else:
             day_text = ""
             day_color = "black"
@@ -220,17 +184,14 @@ if ticker:
         with st.expander("📄 Résumé de l'entreprise (Yahoo Finance)"):
             st.write(summary)
 
-
-        # Affichage stylisé 
+        # Affichage stylisé du prix et des performances
         st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 18px; color: black;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; color: black;">
                 <span>
-                    <strong>Prix actuel :</strong> {prix} {devise} 
-                    <span style="color: {day_color}; margin-left: 10px; font-weight: bold;">
-                        {day_text}
-                    </span>
+                    Prix actuel : {prix} {devise} 
+                    <span style="color: {day_color}; margin-left: 10px;">{day_text}</span>
                 </span>
-                <span style="color: gray; font-size: 16px; font-weight: bold;">
+                <span style="color: gray; font-size: 16px;">
                     {ytd_text}
                 </span>
             </div>
@@ -252,7 +213,7 @@ if ticker:
             else:
                return f"{valeur / 1_000_000:,.2f} M {devise}"
         
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🔢 Ratios", "📊 Valorisation", "💰 Prix d'entrée", "📰 Actualités", "🎙️ Earnings"])
+        tab1, tab2, tab3, tab4 = st.tabs(["🔢 Ratios", "📊 Méthode 1", "💰 Méthode 2", "📰 Actualités"])
         
         with tab1:
             st.title("🔢 Ratios financiers")
@@ -390,7 +351,7 @@ if ticker:
                     st.write("**Actions (évol.)** : N/A")
 
         with tab2:
-            st.title("📊 Valorisation")
+            st.title("📊 Méthode 1 - Estimation simple")
             horizon_m1 = st.number_input("Horizon d'investissement (années)", min_value=1, max_value=30, value=5, step=1)
             cagr_eps = st.number_input("Mon CAGR estimé pour les EPS (en %)", min_value=-100.0, value=12.0)
             eps_actuel = infos.get("trailingEps", 0.01)
@@ -406,7 +367,7 @@ if ticker:
                     st.error(f"**CAGR au prix actuel ({horizon_m1} ans)** : {cagr_prix:.1f} %")
 
         with tab3:
-            st.title("💰 Prix d'entrée juste")
+            st.title("💰 Méthode 2 - Prix d'entrée juste")
             rendement_attendu = st.number_input("Rendement annuel attendu (%)", value=10.0)
             horizon = st.number_input("Nombre d'années", value=5, step=1)
             per_futur = st.number_input("PER que j'estime à l'horizon", min_value=5.0, value=20.0)
@@ -433,31 +394,6 @@ if ticker:
                     st.info(f"Aucune actualité trouvée.")
             except Exception as e:
                 st.error(f"Erreur news : {e}")
-
-
-        with tab5:
-            st.title("🎙️ Earnings & Conf Call")
-            fmp_key = "mmAvgD5gdIBcSLVP1tfPmvohVTFpyEQI"
-            ticker_pur = ticker.split(" - ")[0].strip().upper()
-
-            # 1. Récupération du Transcript (Le plus intéressant)
-            transcript_data = get_fmp_transcript(ticker_pur, fmp_key)
-            
-            if transcript_data:
-                st.subheader(f"📢 Transcript du dernier call ({transcript_data.get('date')})")
-                
-                # On affiche un petit morceau du texte ou le tout dans un expander
-                texte_complet = transcript_data.get('content', '')
-                
-                # Petit hack : On prend les 1000 premiers caractères pour un "aperçu"
-                st.markdown("### 💡 Points clés extraits")
-                preview = texte_complet[:1500] + "..."
-                st.write(preview)
-                
-                with st.expander("📖 Lire l'intégralité du Transcript (Texte brut)"):
-                    st.text(texte_complet)
-            else:
-                st.info("Transcript non disponible pour ce ticker sur le plan gratuit.")
 
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
