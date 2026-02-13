@@ -145,7 +145,7 @@ if ticker:
         if isinstance(prix, (int, float)) and prev_close:
             day_change = ((prix - prev_close) / prev_close) * 100
             day_color = "green" if day_change >= 0 else "red"
-            day_text = f"({day_change:+.2f}% Today)"
+            day_text = f"({day_change:+.2f}%)"
         else:
             day_text = ""
             day_color = "black"
