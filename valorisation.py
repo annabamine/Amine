@@ -184,15 +184,17 @@ if ticker:
         with st.expander("📄 Résumé de l'entreprise (Yahoo Finance)"):
             st.write(summary)
 
-        # Affichage stylisé du prix et des performances
-        # Affichage stylisé du prix et des performances (Prix non gras)
+
+        # Affichage stylisé (Prix normal, Variations en gras + Today)
         st.markdown(f"""
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 18px; color: black;">
                 <span>
                     <strong>Prix actuel :</strong> {prix} {devise} 
-                    <span style="color: {day_color}; margin-left: 10px; font-weight: bold;">{day_text}</span>
+                    <span style="color: {day_color}; margin-left: 10px; font-weight: bold;">
+                        {day_text} <span style="font-size: 14px; font-weight: normal; color: gray;">Today</span>
+                    </span>
                 </span>
-                <span style="color: gray; font-size: 16px;">
+                <span style="color: gray; font-size: 16px; font-weight: bold;">
                     {ytd_text}
                 </span>
             </div>
