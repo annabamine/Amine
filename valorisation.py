@@ -437,12 +437,21 @@ if ticker:
                 st.write(f" {reco}")
 
             
-            # 3. DIVIDENDE RÉCENT (Preuve réelle)
+            # 3. DIVIDENDE RÉCENT (Nettoyé)
             st.subheader("💰 Derniers Versements")
             divs = action.dividends
             if not divs.empty:
-                last_divs = divs.tail(3).sort_index(ascending=False)
-                st.write(last_divs)
+                # On ne garde que la colonne Dividends et on trie du plus récent au plus ancien
+                df_divs = divs.to_frame() # Convertit la série en tableau
+                df_divs = df_divs.sort_index(ascending=False).head(5) # Les 5 derniers
+                
+                # On reformate l'index (la date) pour enlever l'heure (00:00:00)
+                df_divs.index = df_divs.index.strftime('%d/%m/%Y')
+                
+                # On renomme la colonne pour que ce soit plus joli
+                df_divs.columns = ['Montant']
+                
+                st.table(df_divs)
             else:
                 st.write("Cette entreprise ne verse pas de dividendes.")
 
