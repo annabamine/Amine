@@ -22,6 +22,24 @@ def get_fmp_earnings_data(ticker, api_key):
         st.error(f"Erreur : {e}")
     return None
 
+
+def get_fmp_transcript(ticker, api_key):
+    ticker = ticker.upper()
+    # On récupère le dernier transcript disponible
+    url = f"https://financialmodelingprep.com/api/v3/earning_call_transcript/{ticker}?limit=1&apikey={api_key}"
+    
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data and len(data) > 0:
+                return data[0] # Contient 'content', 'date', etc.
+    except:
+        pass
+    return None
+
+
+
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
 
