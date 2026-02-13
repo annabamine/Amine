@@ -216,7 +216,7 @@ if ticker:
             else:
                return f"{valeur / 1_000_000:,.2f} M {devise}"
         
-        tab1, tab2, tab3, tab4 = st.tabs(["🔢 Ratios", "📊 Méthode 1", "💰 Méthode 2", "📰 Actualités"])
+        tab1, tab2, tab3, tab4 = st.tabs(["🔢 Ratios", "📊 Valorisation", "💰 Prix d'entrée", "📰 Actualités"])
         
         with tab1:
             st.title("🔢 Ratios financiers")
@@ -354,7 +354,7 @@ if ticker:
                     st.write("**Actions (évol.)** : N/A")
 
         with tab2:
-            st.title("📊 Méthode 1 - Estimation simple")
+            st.title("📊 Valorisation")
             horizon_m1 = st.number_input("Horizon d'investissement (années)", min_value=1, max_value=30, value=5, step=1)
             cagr_eps = st.number_input("Mon CAGR estimé pour les EPS (en %)", min_value=-100.0, value=12.0)
             eps_actuel = infos.get("trailingEps", 0.01)
@@ -370,7 +370,7 @@ if ticker:
                     st.error(f"**CAGR au prix actuel ({horizon_m1} ans)** : {cagr_prix:.1f} %")
 
         with tab3:
-            st.title("💰 Méthode 2 - Prix d'entrée juste")
+            st.title("💰 Prix d'entrée juste")
             rendement_attendu = st.number_input("Rendement annuel attendu (%)", value=10.0)
             horizon = st.number_input("Nombre d'années", value=5, step=1)
             per_futur = st.number_input("PER que j'estime à l'horizon", min_value=5.0, value=20.0)
