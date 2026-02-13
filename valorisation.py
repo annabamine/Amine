@@ -402,24 +402,34 @@ if ticker:
         with tab5:
             st.title("🎙️ Calendrier & Dividendes")
             
-            # 1. RÉCUPÉRATION DES DATES (Via 'infos' qui est plus stable que 'calendar')
-            next_earn_ts = infos.get('earningsTimestamp') # Prochain Earnings
-            div_date_ts = infos.get('dividendDate')       # Versement
-            ex_div_ts = infos.get('exDividendDate')      # Détachement
+            # 1. RÉCUPÉRATION DES DATES (Avec vérification si la date est passée)
+            next_earn_ts = infos.get('earningsTimestamp')
+            div_date_ts = infos.get('dividendDate')
+            ex_div_ts = infos.get('exDividendDate')
             
             from datetime import datetime
+            now = datetime.now()
+
+            def format_earn_date(ts):
+                if ts:
+                    dt = datetime.fromtimestamp(ts)
+                    # Si la date est passée, on le signale
+                    if dt < now:
+                        return "En attente (Q1)"
+                    return dt.strftime('%d/%m/%Y')
+                return "N/A"
 
             def format_ts(ts):
                 if ts:
                     return datetime.fromtimestamp(ts).strftime('%d/%m/%Y')
                 return "N/A"
 
-            # Affichage des dates clés
+            # Affichage
             st.subheader("📅 Dates à surveiller")
             c1, c2, c3 = st.columns(3)
             
             with c1:
-                st.metric("Prochains Earnings", format_ts(next_earn_ts))
+                st.metric("Prochains Earnings", format_earn_date(next_earn_ts))
             with c2:
                 st.metric("Détachement Div.", format_ts(ex_div_ts))
             with c3:
