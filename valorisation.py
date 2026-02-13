@@ -216,7 +216,7 @@ if ticker:
             else:
                return f"{valeur / 1_000_000:,.2f} M {devise}"
         
-        tab1, tab2, tab3, tab4 = st.tabs(["🔢 Ratios", "📊 Valorisation", "💰 Prix d'entrée", "📰 Actualités"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🔢 Ratios", "📊 Valorisation", "💰 Prix d'entrée", "📰 Actualités", "🎙️ Earnings"])
         
         with tab1:
             st.title("🔢 Ratios financiers")
@@ -397,6 +397,48 @@ if ticker:
                     st.info(f"Aucune actualité trouvée.")
             except Exception as e:
                 st.error(f"Erreur news : {e}")
+
+
+        with tab5:
+            st.title(f"🎙️ Derniers Résultats : {company_name}")
+            
+            try:
+                # Récupération de la date du prochain/dernier earnings
+                cal = action.calendar
+                if cal is not None and not cal.empty:
+                    # On cherche la date (souvent dans 'Earnings Date')
+                    e_date = cal.iloc[0, 0].strftime('%d/%m/%Y')
+                    st.info(f"📅 Prochaine/Dernière publication : **{e_date}**")
+                
+                # Affichage des derniers chiffres (Revenu et Net Income)
+                df_fin = action.financials
+                if not df_fin.empty:
+                    latest_date = df_fin.columns[0]
+                    revenue = df_fin.loc['Total Revenue'].iloc[0]
+                    net_income = df_fin.loc['Net Income'].iloc[0]
+                    
+                    col_e1, col_e2 = st.columns(2)
+                    with col_e1:
+                        st.metric("Revenue (Dernier an)", format_valeur(revenue, devise))
+                    with col_e2:
+                        st.metric("Net Income (Dernier an)", format_valeur(net_income, devise))
+                
+                st.divider()
+                st.subheader("💡 Highlights (Points clés)")
+                
+                # Ici, on prépare la place pour l'API Financial Modeling Prep
+                st.write("*Cette section sera alimentée par le transcript officiel via FMP.*")
+                
+                # Simulation de ce qu'on va aller chercher demain :
+                with st.expander("🔍 Voir les points clés extraits"):
+                    st.markdown("""
+                    - **Guidance** : Les prévisions pour 2026 sont en hausse de 5%.
+                    - **Marges** : Amélioration de 200 bps grâce à l'IA.
+                    - **Dividende** : Augmentation confirmée du rachat d'actions.
+                    """)
+
+            except Exception as e:
+                st.warning("Données Earnings détaillées non disponibles pour le moment.")
 
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
