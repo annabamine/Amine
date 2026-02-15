@@ -393,7 +393,7 @@ if ticker:
                     st.info(f"Le prix actuel ({prix:.2f} {devise}) constitue un bon point d'entrée selon tes hypothèses.")
                 else:
                     st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
-                    st.warning(f"Le prix actuel ({prix:.2f} {devise}) est surrévalué d'après tes hypothèses.")
+                    st.warning(f"Le prix actuel ({prix:.2f} {devise}) est surrévalué selon tes hypothèses.")
 
         
         with tab4:
