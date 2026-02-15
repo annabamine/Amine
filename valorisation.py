@@ -133,6 +133,34 @@ else:
     ticker = None
 
 if ticker:
+
+    # --- CALCUL DE LA MOYENNE SECTORIELLE (CONCURRENTS) ---
+    try:
+        # On récupère les tickers des entreprises similaires via Yahoo
+        recommendations = action.get_recommendations()
+        if not recommendations.empty:
+            # On prend les 5 premiers tickers recommandés (concurrents)
+            tickers_concurrents = recommendations['symbol'].head(5).tolist()
+            pers_concurrents = []
+        
+            for t in tickers_concurrents:
+                comp_info = yf.Ticker(t).info
+                # On récupère le Forward PE (plus pertinent pour le futur)
+                pe = comp_info.get('forwardPE') or comp_info.get('trailingPE')
+                if pe and pe > 0:
+                   pers_concurrents.append(pe)
+        
+            # Calcul de la moyenne
+            if pers_concurrents:
+               moyenne_sectorielle = sum(pers_concurrents) / len(pers_concurrents)
+            else:
+               moyenne_sectorielle = per if isinstance(per, (int, float)) else 15.0
+        else:
+            moyenne_sectorielle = per if isinstance(per, (int, float)) else 15.0
+    except:
+        moyenne_sectorielle = 15.0 # Valeur par défaut en cas d'erreur
+
+    
     try:
         action = yf.Ticker(ticker)
         infos = action.info
@@ -371,29 +399,72 @@ if ticker:
 
         with tab3:
             st.title("💰 Prix d'entrée juste")
-            
-            # --- NOUVEL INPUT INDÉPENDANT ---
+
+            # --- 1. CALCUL DE LA MOYENNE SECTORIELLE (CONCURRENTS) ---
+            try:
+                # Récupération des entreprises similaires via Yahoo
+                recommendations = action.get_recommendations()
+                if recommendations is not None and not recommendations.empty:
+                    # On prend les 5 premiers tickers concurrents
+                    tickers_concurrents = recommendations['symbol'].head(5).tolist()
+                    pers_concurrents = []
+                    
+                    for t in tickers_concurrents:
+                        comp_info = yf.Ticker(t).info
+                        # On cherche le Forward PE, sinon le Trailing PE
+                        pe_comp = comp_info.get('forwardPE') or comp_info.get('trailingPE')
+                        if pe_comp and isinstance(pe_comp, (int, float)) and pe_comp > 0:
+                            pers_concurrents.append(pe_comp)
+                    
+                    if pers_concurrents:
+                        moyenne_sectorielle = sum(pers_concurrents) / len(pers_concurrents)
+                    else:
+                        moyenne_sectorielle = per if isinstance(per, (int, float)) else 15.0
+                else:
+                    # Si pas de recommandations, on utilise le PER de l'entreprise elle-même comme base
+                    moyenne_sectorielle = per if isinstance(per, (int, float)) else 15.0
+            except:
+                moyenne_sectorielle = 15.0
+
+            # --- 2. INPUTS DE LA MÉTHODE ---
             cagr_eps_custom = st.number_input(
                 "Croissance annuelle estimée de l'EPS (%)", 
-                value=cagr_eps, # On garde la valeur de base comme défaut
-                key="cagr_method3" # Clé unique pour Streamlit
+                value=float(cagr_eps) if isinstance(cagr_eps, (int, float)) else 12.0,
+                key="cagr_method3"
             )
             
             rendement_attendu = st.number_input("Rendement annuel attendu (%)", value=10.0)
             horizon = st.number_input("Nombre d'années", value=5, step=1)
-            per_futur = st.number_input("PER que j'estime à l'horizon", min_value=5.0, value=20.0)
+
+            # --- 3. AFFICHAGE DU PER AVEC RAPPEL SECTORIEL CÔTE À CÔTE ---
+            col_input, col_info = st.columns([2, 1])
             
-            # --- CALCUL UTILISANT LA NOUVELLE VARIABLE ---
+            with col_info:
+                # Petit décalage pour aligner avec l'input d'à côté
+                st.write("") 
+                st.write("") 
+                st.markdown(f"**💡 Moy. Secteur :**")
+                st.markdown(f"**{moyenne_sectorielle:.1f}x**")
+
+            with col_input:
+                per_futur = st.number_input(
+                    f"PER que j'estime dans {horizon} ans", 
+                    min_value=5.0, 
+                    value=float(moyenne_sectorielle),
+                    key="per_input_tab3"
+                )
+            
+            # --- 4. CALCULS FINAUX ---
             prix_futur = eps_actuel * ((1 + cagr_eps_custom / 100) ** horizon) * per_futur
             prix_entree = prix_futur / ((1 + rendement_attendu / 100) ** horizon)
             
             if isinstance(prix, (float, int)) and prix > 0 and prix_futur > 0:
                 if prix_entree >= prix:
                     st.success(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
-                    st.info(f"Le prix actuel ({prix:.2f} {devise}) constitue un bon point d'entrée.")
+                    st.info(f"Le prix actuel ({prix:.2f} {devise}) constitue un bon point d'entrée. ✅")
                 else:
                     st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
-                    st.warning(f"Le prix actuel ({prix:.2f} {devise}) est surrévalué d'après tes hypothèses.")
+                    st.warning(f"Le prix actuel ({prix:.2f} {devise}) est surrévalué selon tes hypothèses. ❌")
 
         
         with tab4:
