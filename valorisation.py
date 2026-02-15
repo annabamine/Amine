@@ -390,7 +390,7 @@ if ticker:
             if isinstance(prix, (float, int)) and prix > 0 and prix_futur > 0:
                 if prix_entree >= prix:
                     st.success(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
-                    st.info(f"Le prix actuel ({prix:.2f} {devise}) constitue un bon point d'entrée.")
+                    st.info(f"Le prix actuel ({prix:.2f} {devise}) constitue un bon point d'entrée selon tes hypothèses.")
                 else:
                     st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
                     st.warning(f"Le prix actuel ({prix:.2f} {devise}) est surrévalué d'après tes hypothèses.")
