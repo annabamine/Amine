@@ -479,23 +479,28 @@ if ticker:
             with col_hold:
                 st.write("**Principaux Détenteurs (Institutionnels)**")
                 try:
-                    holders = action.get_institutional_holders()
+                    # Correction pour des données plus fiables
+                    holders = action.institutional_holders
                     if holders is not None and not holders.empty:
-                        # On nettoie le tableau pour l'affichage
                         df_holders = holders[['Holder', 'pctHeld']].copy()
+                        
+                        # Sécurité : Si yfinance renvoie des valeurs > 1 (ex: 58.0 au lieu de 0.58)
+                        # On s'assure que le chiffre est cohérent
+                        def clean_pct(val):
+                            if val > 1: return val / 100
+                            return val
+
+                        df_holders['pctHeld'] = df_holders['pctHeld'].apply(clean_pct)
                         df_holders['pctHeld'] = (df_holders['pctHeld'] * 100).map('{:.2f}%'.format)
                         df_holders.columns = ['Nom', '% Détenu']
+                        
+                        # Index commençant à 1
                         df_holders.index = range(1, len(df_holders) + 1)
-                        st.table(df_holders.head(5)) # On affiche les 5 plus gros
+                        st.table(df_holders.head(5))
                     else:
-                        st.write("Données d'actionnariat non disponibles.")
+                        st.write("Données non disponibles.")
                 except:
-                    st.write("Impossible de charger l'actionnariat.")
-
-            with col_sec:
-                st.write("**Classification Métier**")
-                secteur_nom = infos.get('sector', 'N/A')
-                industrie_nom = infos.get('industry', 'N/A')
+                    st.write("Erreur lors de la récupération.")
                 
                 st.markdown(f"""
                     <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; border-left: 5px solid #001f3f;">
