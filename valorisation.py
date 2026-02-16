@@ -485,6 +485,7 @@ if ticker:
                         df_holders = holders[['Holder', 'pctHeld']].copy()
                         df_holders['pctHeld'] = (df_holders['pctHeld'] * 100).map('{:.2f}%'.format)
                         df_holders.columns = ['Nom', '% Détenu']
+                        df_holders.index = range(1, len(df_holders) + 1)
                         st.table(df_holders.head(5)) # On affiche les 5 plus gros
                     else:
                         st.write("Données d'actionnariat non disponibles.")
