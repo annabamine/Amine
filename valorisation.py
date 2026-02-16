@@ -457,54 +457,60 @@ if ticker:
             else:
                 st.write("Cette entreprise ne verse pas de dividendes.")
 
-            # --- NOUVELLE RUBRIQUE : ACTIONNARIAT & SECTEUR ---
-            st.divider()
+            # --- NOUVELLE SECTION ACTIONNARIAT & SECTEUR ---
             st.subheader("👥 Actionnariat & Secteur")
-
-            # 1. RÉCUPÉRATION DES DONNÉES SECTEUR
-            secteur_nom = infos.get('sector', 'N/A')
-            industrie_nom = infos.get('industry', 'N/A')
+            
+            # On définit les variables ICI pour être sûr qu'elles existent
+            sec_display = infos.get('sector', 'N/A')
+            ind_display = infos.get('industry', 'N/A')
 
             col_hold, col_sec = st.columns(2)
 
             with col_hold:
                 st.write("**Principaux Détenteurs (Institutionnels)**")
                 try:
+                    # Utilisation de institutional_holders (sans parenthèses)
                     holders = action.institutional_holders
                     if holders is not None and not holders.empty:
                         df_holders = holders[['Holder', 'pctHeld']].copy()
                         
-                        def clean_percentage(x):
-                            if x > 1:
-                                return x 
+                        # LOGIQUE ANTI-ERREUR POUR LES % (Spécial Meta/Yahoo)
+                        def fix_percent(x):
+                            if x > 1: return x
                             return x * 100
 
-                        df_holders['pctHeld'] = df_holders['pctHeld'].apply(clean_percentage)
+                        df_holders['pctHeld'] = df_holders['pctHeld'].apply(fix_percent)
+                        
+                        # Sécurité ultime : Si le premier actionnaire affiche 5800% ou 58% indûment
+                        if df_holders['pctHeld'].iloc[0] > 100:
+                            df_holders['pctHeld'] = df_holders['pctHeld'] / 100
+
                         df_holders['pctHeld'] = df_holders['pctHeld'].map('{:.2f}%'.format)
                         df_holders.columns = ['Nom', '% Détenu']
                         df_holders.index = range(1, len(df_holders) + 1)
+                        
                         st.table(df_holders.head(5))
                     else:
-                        st.write("Données d'actionnariat non disponibles.")
+                        st.write("Données institutionnelles non disponibles.")
                 except Exception as e:
-                    st.write("Erreur de récupération des détenteurs.")
+                    st.write(f"Erreur technique holders : {e}")
 
             with col_sec:
                 st.write("**Classification Métier**")
                 st.markdown(f"""
-                    <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; border-left: 5px solid #001f3f;">
-                        <p style="margin-bottom: 5px;"><strong>Secteur :</strong> {secteur_nom}</p>
-                        <p style="margin: 0;"><strong>Industrie :</strong> {industrie_nom}</p>
+                    <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; border-left: 5px solid #001f3f; color: black !important;">
+                        <p style="margin-bottom: 5px; color: black !important;"><strong>Secteur :</strong> {sec_display}</p>
+                        <p style="margin: 0; color: black !important;"><strong>Industrie :</strong> {ind_display}</p>
                     </div>
                 """, unsafe_allow_html=True)
                 
-                try:
-                    insider_pct = infos.get('heldPercentInsiders', 0)
-                    if insider_pct < 1: insider_pct *= 100
-                    st.write("")
-                    st.metric("Actions détenues par les Insiders", f"{insider_pct:.2f}%")
-                except:
-                    pass
+                # Ajout du poids des Insiders (ex: Zuckerberg pour Meta)
+                insider_val = infos.get('heldPercentInsiders', 0)
+                if insider_val < 1: insider_val *= 100
+                st.write("")
+                st.metric("Actions détenues par les Insiders", f"{insider_val:.2f}%")
+
+            st.divider()
 
         with tab5:
             st.title(f"📰 Dernières actualités : {company_name}")
