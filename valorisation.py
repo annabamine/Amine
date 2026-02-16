@@ -468,6 +468,48 @@ if ticker:
             else:
                 st.write("Cette entreprise ne verse pas de dividendes.")
 
+
+
+            # --- NOUVELLE RUBRIQUE : ACTIONNARIAT & SECTEUR ---
+            st.divider()
+            st.subheader("👥 Actionnariat & Secteur")
+
+            col_hold, col_sec = st.columns(2)
+
+            with col_hold:
+                st.write("**Principaux Détenteurs (Institutionnels)**")
+                try:
+                    holders = action.get_institutional_holders()
+                    if holders is not None and not holders.empty:
+                        # On nettoie le tableau pour l'affichage
+                        df_holders = holders[['Holder', 'pctHeld']].copy()
+                        df_holders['pctHeld'] = (df_holders['pctHeld'] * 100).map('{:.2f}%'.format)
+                        df_holders.columns = ['Nom', '% Détenu']
+                        st.table(df_holders.head(5)) # On affiche les 5 plus gros
+                    else:
+                        st.write("Données d'actionnariat non disponibles.")
+                except:
+                    st.write("Impossible de charger l'actionnariat.")
+
+            with col_sec:
+                st.write("**Classification Métier**")
+                secteur_nom = infos.get('sector', 'N/A')
+                industrie_nom = infos.get('industry', 'N/A')
+                
+                st.markdown(f"""
+                    <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; border-left: 5px solid #001f3f;">
+                        <p style="margin-bottom: 5px;"><strong>Secteur :</strong> {secteur_nom}</p>
+                        <p style="margin: 0;"><strong>Industrie :</strong> {industrie_nom}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                # Optionnel : Un petit rappel sur le poids des insiders
+                try:
+                    insider_pct = infos.get('heldPercentInsiders', 0) * 100
+                    st.write(f"**Actions détenues par les Insiders :** {insider_pct:.2f}%")
+                except:
+                    pass
+
   
         with tab5:
             st.title(f"📰 Dernières actualités : {company_name}")
