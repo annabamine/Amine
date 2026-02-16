@@ -461,26 +461,24 @@ if ticker:
             # --- SECTION CLASSIFICATION MÉTIER ---
             st.subheader("🏢 Classification Métier & Insiders")
 
-            # Récupération des variables
+            # Récupération sécurisée
             sec_display = infos.get('sector', 'N/A')
             ind_display = infos.get('industry', 'N/A')
 
             # Affichage de l'encadré Secteur/Industrie
-            if sec_display != 'N/A' or ind_display != 'N/A':
-                st.markdown(f"""
-                    <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-left: 5px solid #001f3f; margin-bottom: 20px;">
-                        <p style="margin-bottom: 10px; color: black !important; font-size: 16px;"><strong>Secteur :</strong> {sec_display}</p>
-                        <p style="margin: 0; color: black !important; font-size: 16px;"><strong>Industrie :</strong> {ind_display}</p>
-                    </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.info("📋 Informations sectorielles non disponibles")
+            st.markdown(f"""
+                <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-left: 5px solid #001f3f; margin-bottom: 20px;">
+                    <p style="margin-bottom: 10px; color: black !important; font-size: 16px;"><strong>Secteur :</strong> {sec_display}</p>
+                    <p style="margin: 0; color: black !important; font-size: 16px;"><strong>Industrie :</strong> {ind_display}</p>
+                </div>
+            """, unsafe_allow_html=True)
 
             # Affichage de la métrique des Insiders
             try:
                 insider_val = infos.get('heldPercentInsiders')
-                if insider_val is not None and insider_val != 0:
-                    # Normalisation intelligente
+                
+                # Si Yahoo renvoie une valeur (même 0.0001)
+                if insider_val is not None and insider_val > 0:
                     if insider_val < 1:
                         insider_pct = insider_val * 100
                     elif insider_val > 100:
@@ -490,11 +488,14 @@ if ticker:
                     
                     st.metric("👤 Actions détenues par les Insiders", f"{insider_pct:.2f}%")
                 else:
-                    st.write("📊 Détention des insiders non communiquée.")
+                    # Message spécifique si Yahoo fait grève (comme pour Meta)
+                    st.info("ℹ️ Détention insiders : Données restreintes ou non disponibles pour ce ticker.")
             except:
                 st.write("📊 Données insiders indisponibles.")
 
             st.divider()
+
+
         with tab5:
             st.title(f"📰 Dernières actualités : {company_name}")
             try:
