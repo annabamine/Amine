@@ -458,100 +458,41 @@ if ticker:
 
             st.divider()
 
-            # --- NOUVELLE SECTION ACTIONNARIAT & SECTEUR ---
-            st.subheader("👥 Actionnariat & Secteur")
+            # --- SECTION CLASSIFICATION MÉTIER ---
+            st.subheader("🏢 Classification Métier & Insiders")
 
-            # Secteur et Industrie
+            # Récupération des variables
             sec_display = infos.get('sector', 'N/A')
             ind_display = infos.get('industry', 'N/A')
 
-            col_hold, col_sec = st.columns(2)
+            # Affichage de l'encadré Secteur/Industrie
+            if sec_display != 'N/A' or ind_display != 'N/A':
+                st.markdown(f"""
+                    <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-left: 5px solid #001f3f; margin-bottom: 20px;">
+                        <p style="margin-bottom: 10px; color: black !important; font-size: 16px;"><strong>Secteur :</strong> {sec_display}</p>
+                        <p style="margin: 0; color: black !important; font-size: 16px;"><strong>Industrie :</strong> {ind_display}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.info("📋 Informations sectorielles non disponibles")
 
-            with col_hold:
-                st.write("**Principaux Détenteurs (Institutionnels)**")
-                try:
-                    # Récupération des données brutes
-                    holders = action.institutional_holders
-                    
-                    if holders is not None and not holders.empty:
-                        # Créer un DataFrame propre
-                        df_display = []
-                        
-                        for idx, row in holders.head(5).iterrows():
-                            nom = row.get('Holder', 'Inconnu')
-                            pct = row.get('pctHeld', 0)
-                            
-                            # Normalisation intelligente du pourcentage
-                            if pct is None or pct == 0:
-                                pct_str = "N/A"
-                            elif pct < 0.01:  # Très petit décimal (ex: 0.0058 = 0.58%)
-                                pct_str = f"{pct * 100:.2f}%"
-                            elif pct < 1:  # Décimal normal (ex: 0.5841 = 58.41%)
-                                pct_str = f"{pct * 100:.2f}%"
-                            elif pct < 100:  # Déjà en pourcentage (ex: 58.41)
-                                pct_str = f"{pct:.2f}%"
-                            else:  # Valeur aberrante (ex: 5841 au lieu de 58.41)
-                                pct_str = f"{pct / 100:.2f}%"
-                            
-                            df_display.append({"Nom": nom, "% Détenu": pct_str})
-                        
-                        # Créer le DataFrame final
-                        import pandas as pd
-                        df_final = pd.DataFrame(df_display)
-                        df_final.index = range(1, len(df_final) + 1)
-                        
-                        st.table(df_final)
+            # Affichage de la métrique des Insiders
+            try:
+                insider_val = infos.get('heldPercentInsiders')
+                if insider_val is not None and insider_val != 0:
+                    # Normalisation intelligente
+                    if insider_val < 1:
+                        insider_pct = insider_val * 100
+                    elif insider_val > 100:
+                        insider_pct = insider_val / 100
                     else:
-                        st.info("📊 Données d'actionnariat institutionnel non disponibles pour ce ticker.")
-                
-                except AttributeError:
-                    st.warning("⚠️ Les données d'actionnariat ne sont pas accessibles (API Yahoo)")
-                except Exception as e:
-                    st.error(f"Erreur technique : {str(e)}")
-
-            with col_sec:
-                st.write("**Classification Métier**")
-                
-                # Encadré pour Secteur/Industrie
-                if sec_display != 'N/A' or ind_display != 'N/A':
-                    st.markdown(f"""
-                        <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; border-left: 5px solid #001f3f;">
-                            <p style="margin-bottom: 5px; color: black !important;"><strong>🏢 Secteur :</strong> {sec_display}</p>
-                            <p style="margin: 0; color: black !important;"><strong>🔧 Industrie :</strong> {ind_display}</p>
-                        </div>
-                    """, unsafe_allow_html=True)
+                        insider_pct = insider_val
+                    
+                    st.metric("👤 Actions détenues par les Insiders", f"{insider_pct:.2f}%")
                 else:
-                    st.info("📋 Informations sectorielles non disponibles")
-                
-                # Insiders avec gestion d'erreur robuste
-                st.write("")
-                st.write("**Détention Insiders**")
-                try:
-                    insider_val = infos.get('heldPercentInsiders')
-                    
-                    if insider_val is None or insider_val == 0:
-                        st.metric("👤 Actions détenues par Insiders", "Non communiqué")
-                    else:
-                        # Normalisation
-                        if insider_val < 0.01:
-                            insider_pct = insider_val * 100
-                        elif insider_val < 1:
-                            insider_pct = insider_val * 100
-                        elif insider_val > 100:
-                            insider_pct = insider_val / 100
-                        else:
-                            insider_pct = insider_val
-                        
-                        # Affichage avec couleur selon l'importance
-                        if insider_pct > 10:
-                            st.metric("👤 Actions Insiders", f"{insider_pct:.2f}%", delta="Fort contrôle")
-                        else:
-                            st.metric("👤 Actions Insiders", f"{insider_pct:.2f}%")
-                
-                except:
-                    st.metric("👤 Actions Insiders", "Données indisponibles")
-
-            st.divider()
+                    st.write("📊 Détention des insiders non communiquée.")
+            except:
+                st.write("📊 Données insiders indisponibles.")
 
             st.divider()
         with tab5:
