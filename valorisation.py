@@ -444,7 +444,6 @@ if ticker:
                 st.write("**Avis Global**")
                 st.write(f" {reco}")
 
-            
             # 3. DIVIDENDE RÉCENT
             st.subheader("💰 Derniers Versements")
             divs = action.dividends
@@ -457,10 +456,12 @@ if ticker:
             else:
                 st.write("Cette entreprise ne verse pas de dividendes.")
 
+            st.divider()
+
             # --- NOUVELLE SECTION ACTIONNARIAT & SECTEUR ---
             st.subheader("👥 Actionnariat & Secteur")
-            
-            # On définit les variables ICI pour être sûr qu'elles existent
+
+            # Secteur et Industrie
             sec_display = infos.get('sector', 'N/A')
             ind_display = infos.get('industry', 'N/A')
 
@@ -469,22 +470,16 @@ if ticker:
             with col_hold:
                 st.write("**Principaux Détenteurs (Institutionnels)**")
                 try:
-                    # Utilisation de institutional_holders (sans parenthèses)
                     holders = action.institutional_holders
                     if holders is not None and not holders.empty:
                         df_holders = holders[['Holder', 'pctHeld']].copy()
                         
-                        # LOGIQUE ANTI-ERREUR POUR LES % (Spécial Meta/Yahoo)
-                        def fix_percent(x):
-                            if x > 1: return x
-                            return x * 100
-
-                        df_holders['pctHeld'] = df_holders['pctHeld'].apply(fix_percent)
+                        # CORRECTION SIMPLE : Si valeur < 1, c'est un décimal, on multiplie par 100
+                        df_holders['pctHeld'] = df_holders['pctHeld'].apply(
+                            lambda x: x * 100 if x < 1 else x
+                        )
                         
-                        # Sécurité ultime : Si le premier actionnaire affiche 5800% ou 58% indûment
-                        if df_holders['pctHeld'].iloc[0] > 100:
-                            df_holders['pctHeld'] = df_holders['pctHeld'] / 100
-
+                        # Formatage en pourcentage
                         df_holders['pctHeld'] = df_holders['pctHeld'].map('{:.2f}%'.format)
                         df_holders.columns = ['Nom', '% Détenu']
                         df_holders.index = range(1, len(df_holders) + 1)
@@ -493,7 +488,7 @@ if ticker:
                     else:
                         st.write("Données institutionnelles non disponibles.")
                 except Exception as e:
-                    st.write(f"Erreur technique holders : {e}")
+                    st.write(f"Erreur actionnariat : {e}")
 
             with col_sec:
                 st.write("**Classification Métier**")
@@ -504,14 +499,22 @@ if ticker:
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # Ajout du poids des Insiders (ex: Zuckerberg pour Meta)
-                insider_val = infos.get('heldPercentInsiders', 0)
-                if insider_val < 1: insider_val *= 100
+                # Insiders
                 st.write("")
-                st.metric("Actions détenues par les Insiders", f"{insider_val:.2f}%")
+                try:
+                    insider_val = infos.get('heldPercentInsiders', 0)
+                    # Si None ou valeur bizarre, mettre 0
+                    if insider_val is None:
+                        insider_val = 0
+                    # Si décimal (< 1), multiplier par 100
+                    elif insider_val < 1:
+                        insider_val *= 100
+                    
+                    st.metric("Actions détenues par les Insiders", f"{insider_val:.2f}%")
+                except:
+                    st.metric("Actions détenues par les Insiders", "N/A")
 
             st.divider()
-
         with tab5:
             st.title(f"📰 Dernières actualités : {company_name}")
             try:
