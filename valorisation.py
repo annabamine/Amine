@@ -399,10 +399,10 @@ if ticker:
         with tab4:
             st.title("🎙️ Calendrier & Dividendes")
             
-            # 1. RÉCUPÉRATION DES DATES (Via 'infos' qui est plus stable que 'calendar')
-            next_earn_ts = infos.get('earningsTimestamp') # Prochain Earnings
-            div_date_ts = infos.get('dividendDate')       # Versement
-            ex_div_ts = infos.get('exDividendDate')      # Détachement
+            # 1. RÉCUPÉRATION DES DATES
+            next_earn_ts = infos.get('earningsTimestamp') 
+            div_date_ts = infos.get('dividendDate')       
+            ex_div_ts = infos.get('exDividendDate')      
             
             from datetime import datetime
 
@@ -411,7 +411,6 @@ if ticker:
                     return datetime.fromtimestamp(ts).strftime('%d/%m/%Y')
                 return "N/A"
 
-            # Affichage des dates clés
             st.subheader("📅 Dates à surveiller")
             c1, c2, c3 = st.columns(3)
             
@@ -424,84 +423,74 @@ if ticker:
 
             st.divider()
 
-            # 2. RÉSUMÉ DU DERNIER RÉSULTAT (Données directes)
+            # 2. RÉSUMÉ DU DERNIER RÉSULTAT
             st.subheader("📊 Dernier Résultat vs Estimations")
             
-            eps_actual = infos.get('trailingEps', 'N/A')
-            eps_estimate = infos.get('earningsQuarterlyEarnings', 'N/A') # Estimation
+            eps_actual_val = infos.get('trailingEps', 'N/A')
             
-            # On essaye de récupérer la "Surprise" si elle existe
             col_s1, col_s2, col_s3 = st.columns(3)
             
             with col_s1:
                 st.write("**EPS Réalisé (TTM)**")
-                st.write(f"{eps_actual} {devise}")
+                st.write(f"{eps_actual_val} {devise}")
             
             with col_s2:
-                # On affiche l'objectif des analystes (Target Price) pour donner une idée du sentiment
                 target = infos.get('targetMeanPrice', 'N/A')
                 st.write("**Objectif Analystes**")
                 st.write(f"{target} {devise}")
                 
             with col_s3:
-                # Recommandation moyenne
                 reco = infos.get('recommendationKey', 'N/A').upper()
                 st.write("**Avis Global**")
                 st.write(f" {reco}")
 
             
-            # 3. DIVIDENDE RÉCENT (Nettoyé)
+            # 3. DIVIDENDE RÉCENT
             st.subheader("💰 Derniers Versements")
             divs = action.dividends
             if not divs.empty:
-                # On ne garde que la colonne Dividends et on trie du plus récent au plus ancien
-                df_divs = divs.to_frame() # Convertit la série en tableau
-                df_divs = df_divs.sort_index(ascending=False).head(5) # Les 5 derniers
-                
-                # On reformate l'index (la date) pour enlever l'heure (00:00:00)
+                df_divs = divs.to_frame() 
+                df_divs = df_divs.sort_index(ascending=False).head(5) 
                 df_divs.index = df_divs.index.strftime('%d/%m/%Y')
-                
-                # On renomme la colonne pour que ce soit plus joli
                 df_divs.columns = ['Montant']
-                
                 st.table(df_divs)
             else:
                 st.write("Cette entreprise ne verse pas de dividendes.")
 
-
-
             # --- NOUVELLE RUBRIQUE : ACTIONNARIAT & SECTEUR ---
             st.divider()
             st.subheader("👥 Actionnariat & Secteur")
+
+            # 1. RÉCUPÉRATION DES DONNÉES SECTEUR
+            secteur_nom = infos.get('sector', 'N/A')
+            industrie_nom = infos.get('industry', 'N/A')
 
             col_hold, col_sec = st.columns(2)
 
             with col_hold:
                 st.write("**Principaux Détenteurs (Institutionnels)**")
                 try:
-                    # Correction pour des données plus fiables
                     holders = action.institutional_holders
                     if holders is not None and not holders.empty:
                         df_holders = holders[['Holder', 'pctHeld']].copy()
                         
-                        # Sécurité : Si yfinance renvoie des valeurs > 1 (ex: 58.0 au lieu de 0.58)
-                        # On s'assure que le chiffre est cohérent
-                        def clean_pct(val):
-                            if val > 1: return val / 100
-                            return val
+                        def clean_percentage(x):
+                            if x > 1:
+                                return x 
+                            return x * 100
 
-                        df_holders['pctHeld'] = df_holders['pctHeld'].apply(clean_pct)
-                        df_holders['pctHeld'] = (df_holders['pctHeld'] * 100).map('{:.2f}%'.format)
+                        df_holders['pctHeld'] = df_holders['pctHeld'].apply(clean_percentage)
+                        df_holders['pctHeld'] = df_holders['pctHeld'].map('{:.2f}%'.format)
                         df_holders.columns = ['Nom', '% Détenu']
-                        
-                        # Index commençant à 1
                         df_holders.index = range(1, len(df_holders) + 1)
                         st.table(df_holders.head(5))
                     else:
-                        st.write("Données non disponibles.")
-                except:
-                    st.write("Erreur lors de la récupération.")
-                
+                        st.write("Données d'actionnariat non disponibles.")
+                except Exception as e:
+                    st.write("Erreur de récupération des détenteurs.")
+
+            with col_sec:
+                st.write("**Classification Métier**")
                 st.markdown(f"""
                     <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; border-left: 5px solid #001f3f;">
                         <p style="margin-bottom: 5px;"><strong>Secteur :</strong> {secteur_nom}</p>
@@ -509,14 +498,14 @@ if ticker:
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # Optionnel : Un petit rappel sur le poids des insiders
                 try:
-                    insider_pct = infos.get('heldPercentInsiders', 0) * 100
-                    st.write(f"**Actions détenues par les Insiders :** {insider_pct:.2f}%")
+                    insider_pct = infos.get('heldPercentInsiders', 0)
+                    if insider_pct < 1: insider_pct *= 100
+                    st.write("")
+                    st.metric("Actions détenues par les Insiders", f"{insider_pct:.2f}%")
                 except:
                     pass
 
-  
         with tab5:
             st.title(f"📰 Dernières actualités : {company_name}")
             try:
@@ -526,8 +515,6 @@ if ticker:
                     for entry in feed.entries[:10]:
                         with st.container():
                             st.subheader(entry.title)
-                            
-                            # VERSION QUI MARCHE À COUP SÛR
                             st.markdown(
                                 f'<a href="{entry.link}" target="_system" rel="noopener noreferrer">'
                                 f'🔗 Lire l\'article complet</a>',
