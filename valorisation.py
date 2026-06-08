@@ -113,23 +113,13 @@ header, .stAppHeader {
 }
 </style>""", unsafe_allow_html=True)
 
-# Cette fonction mémorise les résultats de recherche pendant 24h (86400 secondes)
-@st.cache_data(ttl=86400)
-def fetch_search_results(query):
-    try:
-        search_results = yf.Search(query, max_results=5)
-        return search_results.quotes
-    except:
-        return []
-
-search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple")
 
 search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple")
 
 if search_query:
     try:
-        # On appelle la fonction mise en cache au lieu de yf.Search direct
-        quotes = fetch_search_results(search_query)
+        search_results = yf.Search(search_query, max_results=5)
+        quotes = search_results.quotes
         if quotes:
             options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
             selected = st.selectbox("Sélectionnez l'entreprise :", options)
@@ -142,23 +132,10 @@ if search_query:
 else:
     ticker = None
 
-# Mémorise les données globales de l'entreprise pendant 1 heure (3600 secondes)
-@st.cache_data(ttl=3600)
-def get_ticker_info(ticker_symbol):
-    action = yf.Ticker(ticker_symbol)
-    return action.info
-
-# Mémorise l'historique YTD pendant 1 heure également
-@st.cache_data(ttl=3600)
-def get_ticker_ytd(ticker_symbol):
-    action = yf.Ticker(ticker_symbol)
-    return action.history(period="ytd")
-
 if ticker:
     try:
-        # Remplacement de action = yf.Ticker(ticker) et infos = action.info
-        infos = get_ticker_info(ticker)
-        action = yf.Ticker(ticker) # Conservé uniquement pour .dividends et .balance_sheet plus bas
+        action = yf.Ticker(ticker)
+        infos = action.info
 
         devise = infos.get("currencySymbol") or infos.get("currency") or ""
         prix = infos.get("currentPrice", 0)
@@ -175,8 +152,7 @@ if ticker:
 
         # Performance Year To Date (YTD)
         try:
-            # Remplacement de action.history(period="ytd") par notre fonction en cache
-            hist_ytd = get_ticker_ytd(ticker)
+            hist_ytd = action.history(period="ytd")
             if not hist_ytd.empty:
                 price_jan_1st = hist_ytd['Close'].iloc[0]
                 ytd_change = ((prix - price_jan_1st) / price_jan_1st) * 100
