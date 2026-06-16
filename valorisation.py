@@ -4,15 +4,15 @@ import matplotlib.pyplot as plt
 import feedparser
 import base64
 
-# --- ENDPOINT PING (pour les pings automatiques) ---
+# 1. Toujours en premier
+st.set_page_config(page_title="Value Quest", layout="centered")
+
+# --- ENDPOINT PING ---
 query_params = st.experimental_get_query_params()
 if "ping" in query_params:
     st.write("Pong! App is alive.")
     st.stop()
 # --- FIN ENDPOINT PING ---
-
-# 1. Toujours en premier
-st.set_page_config(page_title="Value Quest", layout="centered")
 
 # 2. Barre de titre (Logique Logo + HTML)
 def get_base64_image(image_path):
