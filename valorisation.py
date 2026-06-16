@@ -284,10 +284,10 @@ if ticker:
             
         # --- LOGIQUE DES ONGLETS MODIFIÉE POUR INCLURE LE TAB 6 ---
         tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-            "📊 Ratio financiers", 
-            "💰 Rendement Attendu", 
+            "📊 Ratios", 
+            "💰 Rentabilité", 
             "📈 Prix juste", 
-            "📋 Dividende et resultats", 
+            "📋 Earnings", 
             "🧠 Actualités", 
             "⚖️ Comparateur",
             "📈 Graphique"
