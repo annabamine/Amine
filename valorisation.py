@@ -7,13 +7,6 @@ import base64
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
 
-# --- ENDPOINT PING ---
-query_params = st.experimental_get_query_params()
-if "ping" in query_params:
-    st.write("Pong! App is alive.")
-    st.stop()
-# --- FIN ENDPOINT PING ---
-
 # 2. Barre de titre (Logique Logo + HTML)
 def get_base64_image(image_path):
     try:
@@ -75,6 +68,12 @@ st.markdown(f"""
         <span class="nav-title">VALUE QUEST</span>
     </div>
 """, unsafe_allow_html=True)
+
+# --- ENDPOINT PING (à mettre ICI, après le premier st.markdown) ---
+if st.experimental_get_query_params().get("ping"):
+    st.write("Pong! App is alive.")
+    st.stop()
+# --- FIN ENDPOINT PING ---
 
 # 3. Styles globaux
 st.markdown("""
