@@ -680,22 +680,6 @@ if ticker:
                     st.subheader("📊 Matrice comparative complète")
                     st.dataframe(df_comparatif, use_container_width=True)
                     
-                    # Graphique dynamique
-                    st.subheader("📈 Comparatif Visuel : PER vs Forward PER")
-                    
-                    graph_data = []
-                    for t_name, metrics in donnees_comparatives.items():
-                        t_per = metrics["PER (Trailing)"]
-                        t_fper = metrics["Forward PER"]
-                        
-                        graph_data.append({
-                            "Entreprise": t_name,
-                            "PER (Trailing)": t_per if isinstance(t_per, (int, float)) else 0,
-                            "Forward PER": t_fper if isinstance(t_fper, (int, float)) else 0
-                        })
-                    
-                    df_graph = pd.DataFrame(graph_data).set_index("Entreprise")
-                    st.bar_chart(df_graph)
 
     # --- CONTENU DU TAB 7 : GRAPHIQUE EN CHANDELIERS ---
         with tab7:
