@@ -3,6 +3,7 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import feedparser
 import base64
+from datetime import datetime
 
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
@@ -69,11 +70,10 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# --- ENDPOINT PING (meilleure version) ---
+# --- ENDPOINT PING ---
 if "ping" in st.query_params:
     st.write("Pong! App is alive.")
     st.stop()
-# --- FIN ENDPOINT PING ---
 
 # 3. Styles globaux
 st.markdown("""
@@ -119,7 +119,7 @@ header, .stAppHeader {
 }
 </style>""", unsafe_allow_html=True)
 
-# Cette fonction mémorise les résultats de recherche pendant 24h (86400 secondes)
+# Mémorisation des résultats de recherche pendant 24h
 @st.cache_data(ttl=86400)
 def fetch_search_results(query):
     try:
@@ -132,7 +132,6 @@ search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "
 
 if search_query:
     try:
-        # On appelle la fonction mise en cache au lieu de yf.Search direct
         quotes = fetch_search_results(search_query)
         if quotes:
             options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
@@ -146,13 +145,13 @@ if search_query:
 else:
     ticker = None
 
-# Mémorise les données globales de l'entreprise pendant 1 heure (3600 secondes)
+# Mémorise les données globales pendant 1 heure
 @st.cache_data(ttl=3600)
 def get_ticker_info(ticker_symbol):
     action = yf.Ticker(ticker_symbol)
     return action.info
 
-# Mémorise l'historique YTD pendant 1 heure également
+# Mémorise l'historique YTD pendant 1 heure
 @st.cache_data(ttl=3600)
 def get_ticker_ytd(ticker_symbol):
     action = yf.Ticker(ticker_symbol)
@@ -160,9 +159,8 @@ def get_ticker_ytd(ticker_symbol):
 
 if ticker:
     try:
-        # Remplacement de action = yf.Ticker(ticker) et infos = action.info
         infos = get_ticker_info(ticker)
-        action = yf.Ticker(ticker) # Conservé uniquement pour .dividends et .balance_sheet plus bas
+        action = yf.Ticker(ticker)
 
         devise = infos.get("currencySymbol") or infos.get("currency") or ""
         prix = infos.get("currentPrice", 0)
@@ -179,7 +177,6 @@ if ticker:
 
         # Performance Year To Date (YTD)
         try:
-            # Remplacement de action.history(period="ytd") par notre fonction en cache
             hist_ytd = get_ticker_ytd(ticker)
             if not hist_ytd.empty:
                 price_jan_1st = hist_ytd['Close'].iloc[0]
@@ -213,60 +210,61 @@ if ticker:
             st.write(summary)
 
         # --- AFFICHAGE DU PRIX (After-Hours + Style Pro) ---
-regular_market_price = infos.get("regularMarketPrice")
-current_price = infos.get("currentPrice", prix)
-post_market_price = infos.get("postMarketPrice") or infos.get("afterHoursPrice")
-pre_market_price = infos.get("preMarketPrice")
-market_state = infos.get("marketState", "").upper()
+        # Remis dans le bon bloc d'indentation (aligné avec le reste du bloc "if ticker:")
+        regular_market_price = infos.get("regularMarketPrice")
+        current_price = infos.get("currentPrice", prix)
+        post_market_price = infos.get("postMarketPrice") or infos.get("afterHoursPrice")
+        pre_market_price = infos.get("preMarketPrice")
+        market_state = infos.get("marketState", "").upper()
 
-from datetime import datetime
-is_market_closed = market_state in ["POST", "PRE"] or (datetime.now().hour >= 22)
+        is_market_closed = market_state in ["POST", "PRE"] or (datetime.now().hour >= 22)
 
-if is_market_closed:
-    if post_market_price:
-        display_price = post_market_price
-        price_label = "Prix After-Hours"
-        price_change = ((display_price - prev_close) / prev_close) * 100
-    elif pre_market_price:
-        display_price = pre_market_price
-        price_label = "Prix Pre-Market"
-        price_change = ((display_price - prev_close) / prev_close) * 100
-    else:
-        display_price = current_price
-        price_label = "Prix de clôture"
-        price_change = 0
-        change_text = "N/A"
-else:
-    display_price = current_price
-    price_label = "Prix actuel"
-    price_change = day_change if isinstance(day_change, (int, float)) else 0
-    change_text = day_text
+        if is_market_closed:
+            if post_market_price:
+                display_price = post_market_price
+                price_label = "Prix After-Hours"
+                price_change = ((display_price - prev_close) / prev_close) * 100
+            elif pre_market_price:
+                display_price = pre_market_price
+                price_label = "Prix Pre-Market"
+                price_change = ((display_price - prev_close) / prev_close) * 100
+            else:
+                display_price = current_price
+                price_label = "Prix de clôture"
+                price_change = 0
+                change_text = "N/A"
+        else:
+            display_price = current_price
+            price_label = "Prix actuel"
+            price_change = day_change if isinstance(day_change, (int, float)) else 0
+            change_text = day_text
 
-if 'change_text' not in locals():
-    change_color = "green" if price_change >= 0 else "red"
-    change_text = f"{price_change:+.2f}%" if price_change != 0 else "0%"
+        if 'change_text' not in locals():
+            change_color = "green" if price_change >= 0 else "red"
+            change_text = f"{price_change:+.2f}%" if price_change != 0 else "0%"
+        else:
+            change_color = "green" if (isinstance(price_change, (int, float)) and price_change >= 0) else "red"
 
-st.markdown(f"""
-<div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #001f3f;">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <span style="font-size: 14px; color: #666; font-weight: bold;">{price_label}</span>
-            <div style="font-size: 32px; font-weight: 700; color: black; margin-top: 5px;">
-                {display_price:.2f} {devise}
+        st.markdown(f"""
+        <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #001f3f;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <span style="font-size: 14px; color: #666; font-weight: bold;">{price_label}</span>
+                    <div style="font-size: 32px; font-weight: 700; color: black; margin-top: 5px;">
+                        {display_price:.2f} {devise}
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 14px; color: {change_color}; font-weight: bold;">
+                        {change_text}
+                    </span>
+                    <div style="font-size: 12px; color: #666; margin-top: 3px;">
+                        {ytd_text}
+                    </div>
+                </div>
             </div>
         </div>
-        <div style="text-align: right;">
-            <span style="font-size: 14px; color: {change_color}; font-weight: bold;">
-                {change_text}
-            </span>
-            <div style="font-size: 12px; color: #666; margin-top: 3px;">
-                {ytd_text}
-            </div>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
+        """, unsafe_allow_html=True)
 
         market_cap = infos.get("marketCap")
         if market_cap is not None:
@@ -439,18 +437,16 @@ st.markdown(f"""
         with tab3:
             st.title("💰 Prix d'entrée juste")
             
-            # --- NOUVEL INPUT INDÉPENDANT ---
             cagr_eps_custom = st.number_input(
                 "Croissance annuelle estimée de l'EPS (%)", 
-                value=cagr_eps, # On garde la valeur de base comme défaut
-                key="cagr_method3" # Clé unique pour Streamlit
+                value=cagr_eps, 
+                key="cagr_method3" 
             )
             
             rendement_attendu = st.number_input("Rendement annuel attendu (%)", value=10.0)
             horizon = st.number_input("Nombre d'années", value=5, step=1)
             per_futur = st.number_input("PER que j'estime à l'horizon", min_value=5.0, value=20.0)
             
-            # --- CALCUL UTILISANT LA NOUVELLE VARIABLE ---
             prix_futur = eps_actuel * ((1 + cagr_eps_custom / 100) ** horizon) * per_futur
             prix_entree = prix_futur / ((1 + rendement_attendu / 100) ** horizon)
             
@@ -462,17 +458,13 @@ st.markdown(f"""
                     st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
                     st.warning(f"Le prix actuel ({prix:.2f} {devise}) est surrévalué selon tes hypothèses.")
 
-        
         with tab4:
             st.title("🎙️ Calendrier & Dividendes")
             
-            # 1. RÉCUPÉRATION DES DATES
             next_earn_ts = infos.get('earningsTimestamp') 
             div_date_ts = infos.get('dividendDate')       
             ex_div_ts = infos.get('exDividendDate')      
             
-            from datetime import datetime
-
             def format_ts(ts):
                 if ts:
                     return datetime.fromtimestamp(ts).strftime('%d/%m/%Y')
@@ -490,7 +482,6 @@ st.markdown(f"""
 
             st.divider()
 
-            # 2. RÉSUMÉ DU DERNIER RÉSULTAT
             st.subheader("📊 Dernier Résultat vs Estimations")
             
             eps_actual_val = infos.get('trailingEps', 'N/A')
@@ -511,7 +502,6 @@ st.markdown(f"""
                 st.write("**Avis Global**")
                 st.write(f" {reco}")
 
-            # 3. DIVIDENDE RÉCENT
             st.subheader("💰 Derniers Versements")
             divs = action.dividends
             if not divs.empty:
@@ -525,14 +515,11 @@ st.markdown(f"""
 
             st.divider()
 
-            # --- SECTION CLASSIFICATION MÉTIER ---
             st.subheader("🏢 Classification Métier & Insiders")
 
-            # Récupération des variables
             sec_display = infos.get('sector', 'N/A')
             ind_display = infos.get('industry', 'N/A')
 
-            # Affichage de l'encadré Secteur/Industrie
             if sec_display != 'N/A' or ind_display != 'N/A':
                 st.markdown(f"""
                     <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-left: 5px solid #001f3f; margin-bottom: 20px;">
@@ -543,11 +530,9 @@ st.markdown(f"""
             else:
                 st.info("📋 Informations sectorielles non disponibles")
 
-            # Affichage de la métrique des Insiders
             try:
                 insider_val = infos.get('heldPercentInsiders')
                 if insider_val is not None and insider_val != 0:
-                    # Normalisation intelligente
                     if insider_val < 1:
                         insider_pct = insider_val * 100
                     elif insider_val > 100:
