@@ -664,7 +664,7 @@ if ticker:
                                     "P/B Ratio": round(info_comp.get("priceToBook"), 2) if isinstance(info_comp.get("priceToBook"), (int, float)) else "N/A",
                                     "Marge Brute": f"{info_comp.get('grossMargins', 0) * 100:.2f}%" if info_comp.get('grossMargins') else "N/A",
                                     "Marge Bénéficiaire": f"{info_comp.get('profitMargins', 0) * 100:.2f}%" if info_comp.get('profitMargins') else "N/A",
-                                    "Rendement Div.": f"{info_comp.get('dividendYield', 0) * 100:.2f}%" if info_comp.get('dividendYield') else "0.00%",
+                                    "Rendement Div.": f"{info_comp.get('dividendYield', 0):.2f}%" if info_comp.get('dividendYield') else "0.00%",
                                     "Debt/Equity": f"{info_comp.get('debtToEquity', 0):.2f}%" if info_comp.get('debtToEquity') else "N/A",
                                 }
                             else:
