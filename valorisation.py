@@ -1,4 +1,10 @@
+# --- ENDPOINT PING (pour les pings automatiques) ---
 import streamlit as st
+query_params = st.experimental_get_query_params()
+if "ping" in query_params:
+    st.write("Pong! App is alive.")
+    st.stop()
+# --- FIN ENDPOINT PING ---
 import yfinance as yf
 import matplotlib.pyplot as plt
 import feedparser
