@@ -212,21 +212,60 @@ if ticker:
         with st.expander("📄 Résumé de l'entreprise (Yahoo Finance)"):
             st.write(summary)
 
-        # Affichage stylisé (Prix normal, Variations + Today en gras)
-        st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 18px; color: black;">
-                <span>
-                    <strong>Prix actuel :</strong> {prix} {devise} 
-                    <span style="color: {day_color}; margin-left: 10px; font-weight: bold;">
-                        {day_text}
-                    </span>
-                </span>
-                <span style="color: gray; font-size: 16px; font-weight: bold;">
-                    {ytd_text}
-                </span>
+        # --- AFFICHAGE DU PRIX (After-Hours + Style Pro) ---
+regular_market_price = infos.get("regularMarketPrice")
+current_price = infos.get("currentPrice", prix)
+post_market_price = infos.get("postMarketPrice") or infos.get("afterHoursPrice")
+pre_market_price = infos.get("preMarketPrice")
+market_state = infos.get("marketState", "").upper()
+
+from datetime import datetime
+is_market_closed = market_state in ["POST", "PRE"] or (datetime.now().hour >= 22)
+
+if is_market_closed:
+    if post_market_price:
+        display_price = post_market_price
+        price_label = "Prix After-Hours"
+        price_change = ((display_price - prev_close) / prev_close) * 100
+    elif pre_market_price:
+        display_price = pre_market_price
+        price_label = "Prix Pre-Market"
+        price_change = ((display_price - prev_close) / prev_close) * 100
+    else:
+        display_price = current_price
+        price_label = "Prix de clôture"
+        price_change = 0
+        change_text = "N/A"
+else:
+    display_price = current_price
+    price_label = "Prix actuel"
+    price_change = day_change if isinstance(day_change, (int, float)) else 0
+    change_text = day_text
+
+if 'change_text' not in locals():
+    change_color = "green" if price_change >= 0 else "red"
+    change_text = f"{price_change:+.2f}%" if price_change != 0 else "0%"
+
+st.markdown(f"""
+<div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #001f3f;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <span style="font-size: 14px; color: #666; font-weight: bold;">{price_label}</span>
+            <div style="font-size: 32px; font-weight: 700; color: black; margin-top: 5px;">
+                {display_price:.2f} {devise}
             </div>
-            <hr style="margin-top: 5px; margin-bottom: 15px;">
-        """, unsafe_allow_html=True)
+        </div>
+        <div style="text-align: right;">
+            <span style="font-size: 14px; color: {change_color}; font-weight: bold;">
+                {change_text}
+            </span>
+            <div style="font-size: 12px; color: #666; margin-top: 3px;">
+                {ytd_text}
+            </div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 
         market_cap = infos.get("marketCap")
