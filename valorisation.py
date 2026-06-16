@@ -5,6 +5,7 @@ import feedparser
 import base64
 import pandas as pd
 from datetime import datetime
+import plotly.graph_objects as go
 
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
@@ -280,6 +281,84 @@ if ticker:
                return f"{valeur / 1_000_000_000:,.2f} Mds {devise}"
             else:
                return f"{valeur / 1_000_000:,.2f} M {devise}"
+
+
+        # ==============================================================================
+        # BLOC GRAPHIQUE EN CHANDELIERS (À PLACER JUSTE AVANT LES TABS)
+        # ==============================================================================
+        st.markdown("---")
+        st.subheader(f"📈 Graphique Historique : {company_name} ({ticker})")
+
+        # 1. Sélection de la période par l'utilisateur
+        periode_choisie = st.selectbox(
+            "Période du graphique :",
+            options=["1 mois", "3 mois", "6 mois", "1 an", "2 ans", "5 ans"],
+            index=3,  # "1 an" par défaut
+            key="graph_period_selector"
+        )
+
+        # Correspondance pour Yahoo Finance
+        mapping_periodes = {
+            "1 mois": "1mo",
+            "3 mois": "3mo",
+            "6 mois": "6mo",
+            "1 an": "1y",
+            "2 ans": "2y",
+            "5 ans": "5y"
+        }
+        yf_period = mapping_periodes[periode_choisie]
+
+        try:
+            # 2. Récupération des données historiques via l'objet 'action' existant
+            df_history = action.history(period=yf_period)
+
+            if not df_history.empty:
+                import plotly.graph_objects as go
+
+                # 3. Création du graphique en chandeliers
+                fig = go.Figure(data=[go.Candlestick(
+                    x=df_history.index,
+                    open=df_history['Open'],
+                    high=df_history['High'],
+                    low=df_history['Low'],
+                    close=df_history['Close'],
+                    name=ticker,
+                    increasing_line_color='#26a69a',  # Vert trading flat
+                    decreasing_line_color='#ef5350',  # Rouge trading flat
+                    increasing_fill_color='#26a69a',
+                    decreasing_fill_color='#ef5350'
+                )])
+
+                # 4. Design et personnalisation du Layout
+                fig.update_layout(
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    height=450,
+                    paper_bgcolor='#fffdf4',  # Fond de ton application
+                    plot_bgcolor='white',     # Fond du graphique
+                    xaxis_rangeslider_visible=True,  # Curseur de zoom en bas
+                    xaxis=dict(
+                        gridcolor='#f0f0f0',
+                        tickfont=dict(color='black')
+                    ),
+                    yaxis=dict(
+                        gridcolor='#f0f0f0',
+                        side="right",  # Prix à droite style TradingView
+                        tickfont=dict(color='black')
+                    ),
+                    hovermode="x unified"  # Tooltip vertical complet au survol
+                )
+
+                # 5. Affichage dans Streamlit
+                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+            else:
+                st.warning("Aucune donnée historique trouvée pour cette période.")
+        except Exception as e:
+            st.error(f"Erreur lors de la génération du graphique : {e}")
+
+    except Exception as global_e:
+        st.error(f"Erreur lors de la récupération globale du ticker : {global_e}")
+
+        
             
         # --- LOGIQUE DES ONGLETS MODIFIÉE POUR INCLURE LE TAB 6 ---
         tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
