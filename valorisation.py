@@ -122,7 +122,7 @@ def fetch_search_results(query):
     except:
         return []
 
-search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Apple", key="main_search_query")
+search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Nvidia", key="main_search_query")
 
 if search_query:
     try:
