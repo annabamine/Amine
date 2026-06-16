@@ -576,56 +576,109 @@ if ticker:
             except Exception as e:
                 st.error(f"Erreur news : {e}")
 
-        # --- CONTENU DU TAB 6 : LE COMPARATEUR MULTI-TICKERS ---
+        # --- CONTENU DU TAB 6 : LE COMPARATEUR DYNAMIQUE ET INTUITIF ---
         with tab6:
             st.title("⚖️ Comparateur d'Entreprises")
-            st.write(f"Comparez **{company_name} ({ticker})** avec d'autres entreprises du secteur.")
+            st.write(f"Comparez **{company_name} ({ticker})** avec les entreprises de votre choix (max 3 au total).")
 
-            # Par défaut, on initialise la liste avec l'action actuellement recherchée
-            entreprises_choisies = st.multiselect(
-                "Sélectionnez ou tapez les tickers à mettre en concurrence (max 3) :",
-                options=[ticker, "AAPL", "MSFT", "GOOGL", "META", "NVDA", "TTE", "SAN.PA", "BNP.PA", "PYPL"],
-                default=[ticker],
-                max_selections=3,
-                key="comparison_multiselect"
-            )
+            # Initialisation de la liste des tickers comparés dans la session Streamlit
+            if "tickers_comparateurs" not in st.session_state:
+                st.session_state.tickers_comparateurs = []
 
-            if len(entreprises_choisies) < 2:
-                st.info("💡 Veuillez ajouter au moins une autre entreprise dans la liste ci-dessus pour lancer le tableau comparatif.")
+            # L'entreprise principale est toujours incluse par défaut, on calcule les places restantes
+            # Max 3 au total = Ticker principal + 2 tickers ajoutés
+            places_restantes = 2 - len(st.session_state.tickers_comparateurs)
+
+            st.markdown("---")
+            st.subheader("🔍 Ajouter une entreprise au comparateur")
+            
+            if places_restantes > 0:
+                # Utilisation de la même logique de recherche textuelle qu'au début du script
+                search_comp = st.text_input(
+                    f"Rechercher par nom ou ticker (Il vous reste {places_restantes} emplacement(s)) :", 
+                    value="", 
+                    key="search_comp_input"
+                )
+                
+                if search_comp:
+                    try:
+                        # On réutilise ta fonction de cache globale fetch_search_results
+                        quotes_comp = fetch_search_results(search_comp)
+                        if quotes_comp:
+                            options_comp = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes_comp]
+                            selected_comp = st.selectbox("Sélectionnez l'entreprise à ajouter :", options_comp, key="select_comp_box")
+                            ticker_to_add = selected_comp.split(" - ")[0]
+                            
+                            # Bouton pour valider l'ajout
+                            if st.button(f"➕ Ajouter {ticker_to_add} au tableau", key="btn_add_ticker"):
+                                if ticker_to_add == ticker:
+                                    st.warning("Cette entreprise est déjà l'entreprise principale affichée.")
+                                elif ticker_to_add in st.session_state.tickers_comparateurs:
+                                    st.warning("Cette entreprise est déjà dans votre liste de comparaison.")
+                                else:
+                                    st.session_state.tickers_comparateurs.append(ticker_to_add)
+                                    st.rerun()
+                        else:
+                            st.warning(f"Aucun résultat pour '{search_comp}'")
+                    except Exception as e:
+                        st.error(f"Erreur de recherche : {e}")
+            else:
+                st.info("💡 Vous avez atteint la limite de 3 entreprises (l'entreprise principale + 2 comparaisons). Supprimez-en une pour en ajouter une nouvelle.")
+
+            # Affichage et gestion de la liste des entreprises ajoutées
+            if st.session_state.tickers_comparateurs:
+                st.write("**Entreprises ajoutées pour la comparaison :**")
+                for t_comp in st.session_state.tickers_comparateurs:
+                    col_t_name, col_t_btn = st.columns([4, 1])
+                    col_t_name.write(f"• **{t_comp}**")
+                    if col_t_btn.button(f"❌ Retirer", key=f"remove_{t_comp}"):
+                        st.session_state.tickers_comparateurs.remove(t_comp)
+                        st.rerun()
+
+            # --- CONSTITUTION ET AFFICHAGE DE LA MATRICE COMPARATIVE ---
+            # La liste finale contient toujours le ticker principal en premier
+            liste_finale_tickers = [ticker] + st.session_state.tickers_comparateurs
+
+            if len(liste_finale_tickers) < 2:
+                st.info("💡 Utilisez la barre de recherche ci-dessus pour ajouter au moins une entreprise à juxtaposer.")
             else:
                 donnees_comparatives = {}
 
-                with st.spinner("Juxtaposition des métriques financières..."):
-                    for t_name in entreprises_choisies:
+                with st.spinner("Extraction et alignement des données financières..."):
+                    for t_name in liste_finale_tickers:
                         try:
-                            # Récupération via ta fonction de cache existante
+                            # Utilisation de ton cache existant get_ticker_info
                             info_comp = get_ticker_info(t_name)
-                            devise_comp = info_comp.get("currencySymbol") or info_comp.get("currency") or ""
                             
-                            donnees_comparatives[t_name] = {
-                                "Nom": info_comp.get("longName", "N/A"),
-                                "Secteur": info_comp.get("sector", "N/A"),
-                                "Prix Actuel": f"{info_comp.get('currentPrice', 0):.2f} {devise_comp}" if info_comp.get('currentPrice') else "N/A",
-                                "Capitalisation": f"{info_comp.get('marketCap', 0) / 1e9:.2f} Mds {devise_comp}" if info_comp.get('marketCap') else "N/A",
-                                "PER (Trailing)": round(info_comp.get("trailingPE"), 2) if isinstance(info_comp.get("trailingPE"), (int, float)) else "N/A",
-                                "Forward PER": round(info_comp.get("forwardPE"), 2) if isinstance(info_comp.get("forwardPE"), (int, float)) else "N/A",
-                                "PEG Ratio": info_comp.get("pegRatio", "N/A"),
-                                "P/B Ratio": round(info_comp.get("priceToBook"), 2) if isinstance(info_comp.get("priceToBook"), (int, float)) else "N/A",
-                                "Marge Brute": f"{info_comp.get('grossMargins', 0) * 100:.2f}%" if info_comp.get('grossMargins') else "N/A",
-                                "Marge Bénéficiaire": f"{info_comp.get('profitMargins', 0) * 100:.2f}%" if info_comp.get('profitMargins') else "N/A",
-                                "Rendement Div.": f"{info_comp.get('dividendYield', 0) * 100:.2f}%" if info_comp.get('dividendYield') else "0.00%",
-                                "Debt/Equity": f"{info_comp.get('debtToEquity', 0):.2f}%" if info_comp.get('debtToEquity') else "N/A",
-                            }
+                            if info_comp and ("currency" in info_comp or "currencySymbol" in info_comp):
+                                devise_comp = info_comp.get("currencySymbol") or info_comp.get("currency") or ""
+                                
+                                donnees_comparatives[t_name] = {
+                                    "Nom": info_comp.get("longName", "N/A"),
+                                    "Secteur": info_comp.get("sector", "N/A"),
+                                    "Prix Actuel": f"{info_comp.get('currentPrice', 0):.2f} {devise_comp}" if info_comp.get('currentPrice') else "N/A",
+                                    "Capitalisation": f"{info_comp.get('marketCap', 0) / 1e9:.2f} Mds {devise_comp}" if info_comp.get('marketCap') else "N/A",
+                                    "PER (Trailing)": round(info_comp.get("trailingPE"), 2) if isinstance(info_comp.get("trailingPE"), (int, float)) else "N/A",
+                                    "Forward PER": round(info_comp.get("forwardPE"), 2) if isinstance(info_comp.get("forwardPE"), (int, float)) else "N/A",
+                                    "PEG Ratio": info_comp.get("pegRatio", "N/A"),
+                                    "P/B Ratio": round(info_comp.get("priceToBook"), 2) if isinstance(info_comp.get("priceToBook"), (int, float)) else "N/A",
+                                    "Marge Brute": f"{info_comp.get('grossMargins', 0) * 100:.2f}%" if info_comp.get('grossMargins') else "N/A",
+                                    "Marge Bénéficiaire": f"{info_comp.get('profitMargins', 0) * 100:.2f}%" if info_comp.get('profitMargins') else "N/A",
+                                    "Rendement Div.": f"{info_comp.get('dividendYield', 0) * 100:.2f}%" if info_comp.get('dividendYield') else "0.00%",
+                                    "Debt/Equity": f"{info_comp.get('debtToEquity', 0):.2f}%" if info_comp.get('debtToEquity') else "N/A",
+                                }
+                            else:
+                                st.error(f"Impossible de récupérer des données valides pour {t_name}")
                         except Exception as e:
-                            st.error(f"Erreur avec le ticker {t_name} : {e}")
+                            st.error(f"Erreur sur le ticker {t_name} : {e}")
 
                 if donnees_comparatives:
                     df_comparatif = pd.DataFrame(donnees_comparatives)
-                    st.subheader("📊 Matrice comparative")
+                    st.markdown("---")
+                    st.subheader("📊 Matrice comparative complète")
                     st.dataframe(df_comparatif, use_container_width=True)
                     
-                    # Graphique rapide
-                    st.markdown("---")
+                    # Graphique dynamique
                     st.subheader("📈 Comparatif Visuel : PER vs Forward PER")
                     
                     graph_data = []
