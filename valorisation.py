@@ -315,18 +315,16 @@ if ticker:
             if not df_history.empty:
                 import plotly.graph_objects as go
 
-                # 3. Création du graphique en chandeliers
+                # 3. Création du graphique en chandeliers (Syntaxe Plotly stricte)
                 fig = go.Figure(data=[go.Candlestick(
-                    x=df_history.index,
-                    open=df_history['Open'],
-                    high=df_history['High'],
-                    low=df_history['Low'],
-                    close=df_history['Close'],
-                    name=ticker,
-                    increasing_line_color='#26a69a',  # Vert trading flat
-                    decreasing_line_color='#ef5350',  # Rouge trading flat
-                    increasing_fill_color='#26a69a',
-                    decreasing_fill_color='#ef5350'
+                     x=df_history.index,
+                     open=df_history['Open'],
+                     high=df_history['High'],
+                     low=df_history['Low'],
+                     close=df_history['Close'],
+                     name=ticker,
+                     increasing=dict(line_color='#26a69a', fillcolor='#26a69a'), # Vert émeraude
+                     decreasing=dict(line_color='#ef5350', fillcolor='#ef5350')  # Rouge boursier
                 )])
 
                 # 4. Design et personnalisation du Layout
