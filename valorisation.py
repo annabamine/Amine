@@ -69,8 +69,8 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# --- ENDPOINT PING (à mettre ICI, après le premier st.markdown) ---
-if st.experimental_get_query_params().get("ping"):
+# --- ENDPOINT PING (meilleure version) ---
+if "ping" in st.query_params:
     st.write("Pong! App is alive.")
     st.stop()
 # --- FIN ENDPOINT PING ---
