@@ -796,7 +796,7 @@ if ticker:
                 if "BOURSORAMA_OAT" in ticker_market:
                     url = "https://www.boursorama.com/bourse/taux/cours/2xFR001400H6A7/" if "2Y" in ticker_market else "https://www.boursorama.com/bourse/taux/cours/2xFR001400NDK4/"
                     price_oat = fetch_oat_from_boursorama(url)
-                         if price_oat:
+                    if price_oat:
                             return {
                                 "price": f"{price_oat:.2f}%",
                                 "change": "--",  # Bourso varie peu en intraday pour les particuliers
