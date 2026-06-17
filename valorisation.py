@@ -172,24 +172,46 @@ if ticker:
         action = yf.Ticker(ticker)
 
         devise = infos.get("currencySymbol") or infos.get("currency") or ""
-        prix = infos.get("currentPrice", 0)
-
-        # --- CALCULS DE PERFORMANCE ---
+        prix_cloture = infos.get("regularMarketPrice") or infos.get("currentPrice", 0)
         prev_close = infos.get("regularMarketPreviousClose")
-        if isinstance(prix, (int, float)) and prev_close:
-            day_change = ((prix - prev_close) / prev_close) * 100
-            day_color = "green" if day_change >= 0 else "red"
-            day_text = f"({day_change:+.2f}%)"
-        else:
-            day_text = ""
-            day_color = "black"
+
+        # --- DÉTECTION ROBUSTE PRE/POST MARKET ---
+        pre_market_price = infos.get("preMarketPrice")
+        post_market_price = infos.get("postMarketPrice") or infos.get("afterHoursPrice")
+        market_state = infos.get("marketState", "").upper()
+
+        display_price = prix_cloture
+        price_label = "Prix de clôture"
+        price_change_pct = 0.0
+
+        if prix_cloture and prev_close:
+            price_change_pct = ((prix_cloture - prev_close) / prev_close) * 100
+
+        if "PRE" in market_state and pre_market_price:
+            display_price = pre_market_price
+            price_label = "Prix Pre-Market"
+            if prev_close:
+                price_change_pct = ((pre_market_price - prev_close) / prev_close) * 100
+        elif ("POST" in market_state or "CLOSED" in market_state) and post_market_price:
+            display_price = post_market_price
+            price_label = "Prix After-Hours"
+            if prev_close:
+                price_change_pct = ((post_market_price - prev_close) / prev_close) * 100
+        elif "REGULAR" in market_state:
+            display_price = prix_cloture
+            price_label = "Prix actuel"
+            if prev_close:
+                price_change_pct = ((prix_cloture - prev_close) / prev_close) * 100
+
+        change_color = "green" if price_change_pct >= 0 else "red"
+        change_text = f"{price_change_pct:+.2f}%"
 
         # Performance Year To Date (YTD)
         try:
             hist_ytd = get_ticker_ytd(ticker)
             if not hist_ytd.empty:
                 price_jan_1st = hist_ytd['Close'].iloc[0]
-                ytd_change = ((prix - price_jan_1st) / price_jan_1st) * 100
+                ytd_change = ((display_price - price_jan_1st) / price_jan_1st) * 100
                 ytd_text = f"{ytd_change:+.2f}% YTD"
             else:
                 ytd_text = "N/A YTD"
@@ -218,41 +240,7 @@ if ticker:
         with st.expander("📄 Résumé de l'entreprise (Yahoo Finance)"):
             st.write(summary)
 
-        # --- AFFICHAGE DU PRIX (After-Hours + Style Pro) ---
-        regular_market_price = infos.get("regularMarketPrice")
-        current_price = infos.get("currentPrice", prix)
-        post_market_price = infos.get("postMarketPrice") or infos.get("afterHoursPrice")
-        pre_market_price = infos.get("preMarketPrice")
-        market_state = infos.get("marketState", "").upper()
-
-        is_market_closed = market_state in ["POST", "PRE"] or (datetime.now().hour >= 22)
-
-        if is_market_closed:
-            if post_market_price:
-                display_price = post_market_price
-                price_label = "Prix After-Hours"
-                price_change = ((display_price - prev_close) / prev_close) * 100
-            elif pre_market_price:
-                display_price = pre_market_price
-                price_label = "Prix Pre-Market"
-                price_change = ((display_price - prev_close) / prev_close) * 100
-            else:
-                display_price = current_price
-                price_label = "Prix de clôture"
-                price_change = 0
-                change_text = "N/A"
-        else:
-            display_price = current_price
-            price_label = "Prix actuel"
-            price_change = day_change if isinstance(day_change, (int, float)) else 0
-            change_text = day_text
-
-        if 'change_text' not in locals():
-            change_color = "green" if price_change >= 0 else "red"
-            change_text = f"{price_change:+.2f}%" if price_change != 0 else "0%"
-        else:
-            change_color = "green" if (isinstance(price_change, (int, float)) and price_change >= 0) else "red"
-
+        # Rendu du bloc Prix
         st.markdown(f"""
         <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #001f3f;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -289,7 +277,7 @@ if ticker:
             else:
                return f"{valeur / 1_000_000:,.2f} M {devise}"  
             
-        # --- LOGIQUE DES ONGLETS MODIFIÉE ---
+        # --- ONGLETS ---
         tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
             "📊 Ratios", 
             "💰 Rentabilité", 
@@ -308,9 +296,10 @@ if ticker:
                 st.write(f"**PER (trailing)** : {per}")
                 st.write(f"**PER (forward)** : {fper}")
                 st.write(f"**EPS (trailing)** : {eps}")
+                
                 try:
                     ocf_ttm = infos.get("operatingCashflow")
-                    if not ocf_ttm:
+                    if not ocf_ttm and hasattr(action, 'cashflow') and "Operating Cash Flow" in action.cashflow.index:
                         ocf_ttm = action.cashflow.loc["Operating Cash Flow"].iloc[0]
                     if ocf_ttm and market_cap and ocf_ttm > 0:
                         p_ocf = market_cap / ocf_ttm
@@ -322,7 +311,7 @@ if ticker:
 
                 try:
                     fcf_ttm = infos.get("freeCashflow")
-                    if not fcf_ttm:
+                    if not fcf_ttm and hasattr(action, 'cashflow') and "Free Cash Flow" in action.cashflow.index:
                         fcf_ttm = action.cashflow.loc["Free Cash Flow"].iloc[0]
                     if fcf_ttm and market_cap and fcf_ttm > 0:
                         price_to_fcf = market_cap / fcf_ttm
@@ -342,17 +331,23 @@ if ticker:
                 try:
                     ocf_ttm = infos.get("operatingCashflow")
                     fcf_ttm = infos.get("freeCashflow")
+                    
+                    if not ocf_ttm and hasattr(action, 'cashflow') and "Operating Cash Flow" in action.cashflow.index:
+                        ocf_ttm = action.cashflow.loc["Operating Cash Flow"].iloc[0]
+                    if not fcf_ttm and hasattr(action, 'cashflow') and "Free Cash Flow" in action.cashflow.index:
+                        fcf_ttm = action.cashflow.loc["Free Cash Flow"].iloc[0]
+
                     if ocf_ttm and fcf_ttm:
                         capex_ttm = fcf_ttm - ocf_ttm
+                    elif hasattr(action, 'cashflow') and "Capital Expenditure" in action.cashflow.index:
+                        capex_ttm = action.cashflow.loc["Capital Expenditure"].iloc[0]
                     else:
-                        cashflow = action.cashflow
-                        capex_ttm = cashflow.loc["Capital Expenditure"].iloc[0]
-                        ocf_ttm = cashflow.loc["Operating Cash Flow"].iloc[0]
-                        fcf_ttm = cashflow.loc["Free Cash Flow"].iloc[0]
+                        capex_ttm = None
 
-                    st.write(f"**CAPEX** : {format_valeur(abs(capex_ttm), devise)}")
+                    st.write(f"**CAPEX** : {format_valeur(abs(capex_ttm) if capex_ttm else None, devise)}")
                     st.write(f"**Op Cash Flow** : {format_valeur(ocf_ttm, devise)}")
-                    if ocf_ttm and ocf_ttm != 0:
+                    
+                    if ocf_ttm and capex_ttm and ocf_ttm != 0:
                         ratio_capex_ocf = abs(capex_ttm) / ocf_ttm * 100
                         st.write(f"**CAPEX/OCF** : {ratio_capex_ocf:.1f} %")
                     else:
@@ -404,7 +399,10 @@ if ticker:
 
                 try:
                     total_debt = infos.get("totalDebt")
-                    fcf_ttm = infos.get("freeCashflow") or action.cashflow.loc["Free Cash Flow"].iloc[0]
+                    fcf_ttm = infos.get("freeCashflow")
+                    if not fcf_ttm and hasattr(action, 'cashflow') and "Free Cash Flow" in action.cashflow.index:
+                        fcf_ttm = action.cashflow.loc["Free Cash Flow"].iloc[0]
+                        
                     if fcf_ttm and total_debt and fcf_ttm > 0:
                         debt_to_fcf = total_debt / fcf_ttm
                         st.write(f"**Debt/FCF** : {debt_to_fcf:.2f} ans")
@@ -440,13 +438,18 @@ if ticker:
             st.title("📊 Valorisation")
             horizon_m1 = st.number_input("Horizon d'investissement (années)", min_value=1, max_value=30, value=5, step=1)
             cagr_eps = st.number_input("Mon CAGR estimé pour les EPS (en %)", min_value=-100.0, value=12.0)
-            eps_actuel = infos.get("trailingEps", 0.01)
+            
+            eps_actuel = infos.get("trailingEps")
+            if not isinstance(eps_actuel, (int, float)):
+                eps_actuel = 0.01
+                
             eps_futur = eps_actuel * ((1 + cagr_eps / 100) ** horizon_m1)
             per_estime = st.number_input(f"PER que j'estime dans {horizon_m1} ans", min_value=5.0, value=20.0)
             prix_cible = eps_futur * per_estime
             st.write(f"**Prix cible dans {horizon_m1} ans** : {prix_cible:.2f} {devise}")
-            if isinstance(prix, (float, int)) and prix_cible > 0 and prix > 0:
-                cagr_prix = ((prix_cible / prix) ** (1/horizon_m1) - 1) * 100
+            
+            if isinstance(display_price, (float, int)) and prix_cible > 0 and display_price > 0:
+                cagr_prix = ((prix_cible / display_price) ** (1/horizon_m1) - 1) * 100
                 if cagr_prix >= 10:
                     st.success(f"**CAGR au prix actuel ({horizon_m1} ans)** : {cagr_prix:.1f} %")
                 else:
@@ -454,13 +457,7 @@ if ticker:
 
         with tab3:
             st.title("💰 Prix d'entrée juste")
-            
-            cagr_eps_custom = st.number_input(
-                "Croissance annuelle estimée de l'EPS (%)", 
-                value=cagr_eps, 
-                key="cagr_method3" 
-            )
-            
+            cagr_eps_custom = st.number_input("Croissance annuelle estimée de l'EPS (%)", value=cagr_eps, key="cagr_method3")
             rendement_attendu = st.number_input("Rendement annuel attendu (%)", value=10.0)
             horizon = st.number_input("Nombre d'années", value=5, step=1)
             per_futur = st.number_input("PER que j'estime à l'horizon", min_value=5.0, value=20.0)
@@ -468,29 +465,30 @@ if ticker:
             prix_futur = eps_actuel * ((1 + cagr_eps_custom / 100) ** horizon) * per_futur
             prix_entree = prix_futur / ((1 + rendement_attendu / 100) ** horizon)
             
-            if isinstance(prix, (float, int)) and prix > 0 and prix_futur > 0:
-                if prix_entree >= prix:
+            if isinstance(display_price, (float, int)) and display_price > 0 and prix_futur > 0:
+                if prix_entree >= display_price:
                     st.success(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
-                    st.info(f"Le prix actuel ({prix:.2f} {devise}) constitue un bon point d'entrée selon tes hypothèses.")
+                    st.info(f"Le prix actuel ({display_price:.2f} {devise}) constitue un bon point d'entrée selon tes hypothèses.")
                 else:
                     st.error(f"**Prix d'entrée juste aujourd'hui** : {prix_entree:.2f} {devise}")
-                    st.warning(f"Le prix actuel ({prix:.2f} {devise}) est surrévalué selon tes hypothèses.")
+                    st.warning(f"Le prix actuel ({display_price:.2f} {devise}) est surrévalué selon tes hypothèses.")
 
         with tab4:
             st.title("🎙️ Calendrier & Dividendes")
-            
             next_earn_ts = infos.get('earningsTimestamp') 
             div_date_ts = infos.get('dividendDate')       
             ex_div_ts = infos.get('exDividendDate')      
             
             def format_ts(ts):
                 if ts:
-                    return datetime.fromtimestamp(ts).strftime('%d/%m/%Y')
+                    try:
+                        return datetime.fromtimestamp(ts).strftime('%d/%m/%Y')
+                    except:
+                        pass
                 return "N/A"
 
             st.subheader("📅 Dates à surveiller")
             c1, c2, c3 = st.columns(3)
-            
             with c1:
                 st.metric("Prochains Earnings", format_ts(next_earn_ts))
             with c2:
@@ -499,42 +497,37 @@ if ticker:
                 st.metric("Versement Div.", format_ts(div_date_ts))
 
             st.divider()
-
             st.subheader("📊 Dernier Résultat vs Estimations")
-            
             eps_actual_val = infos.get('trailingEps', 'N/A')
-            
             col_s1, col_s2, col_s3 = st.columns(3)
-            
             with col_s1:
                 st.write("**EPS Réalisé (TTM)**")
                 st.write(f"{eps_actual_val} {devise}")
-            
             with col_s2:
                 target = infos.get('targetMeanPrice', 'N/A')
                 st.write("**Objectif Analystes**")
                 st.write(f"{target} {devise}")
-                
             with col_s3:
-                reco = infos.get('recommendationKey', 'N/A').upper()
+                reco = str(infos.get('recommendationKey', 'N/A')).upper()
                 st.write("**Avis Global**")
                 st.write(f" {reco}")
 
             st.subheader("💰 Derniers Versements")
-            divs = action.dividends
-            if not divs.empty:
-                df_divs = divs.to_frame() 
-                df_divs = df_divs.sort_index(ascending=False).head(5) 
-                df_divs.index = df_divs.index.strftime('%d/%m/%Y')
-                df_divs.columns = ['Montant']
-                st.table(df_divs)
-            else:
-                st.write("Cette entreprise ne verse pas de dividendes.")
+            try:
+                divs = action.dividends
+                if not divs.empty:
+                    df_divs = divs.to_frame() 
+                    df_divs = df_divs.sort_index(ascending=False).head(5) 
+                    df_divs.index = df_divs.index.strftime('%d/%m/%Y')
+                    df_divs.columns = ['Montant']
+                    st.table(df_divs)
+                else:
+                    st.write("Cette entreprise ne verse pas de dividendes.")
+            except:
+                st.write("Impossible de récupérer l'historique des dividendes.")
 
             st.divider()
-
             st.subheader("🏢 Classification Métier & Insiders")
-
             sec_display = infos.get('sector', 'N/A')
             ind_display = infos.get('industry', 'N/A')
 
@@ -557,14 +550,11 @@ if ticker:
                         insider_pct = insider_val / 100
                     else:
                         insider_pct = insider_val
-                    
                     st.metric("👤 Actions détenues par les Insiders", f"{insider_pct:.2f}%")
                 else:
                     st.write("📊 Détention des insiders non communiquée.")
             except:
                 st.write("📊 Données insiders indisponibles.")
-
-            st.divider()
 
         with tab5:
             st.title(f"📰 Dernières actualités : {company_name}")
@@ -575,11 +565,7 @@ if ticker:
                     for entry in feed.entries[:10]:
                         with st.container():
                             st.subheader(entry.title)
-                            st.markdown(
-                                f'<a href="{entry.link}" target="_system" rel="noopener noreferrer">'
-                                f'🔗 Lire l\'article complet</a>',
-                                unsafe_allow_html=True
-                            )
+                            st.markdown(f'<a href="{entry.link}" target="_system" rel="noopener noreferrer">🔗 Lire l\'article complet</a>', unsafe_allow_html=True)
                             st.divider()
                 else:
                     st.info(f"Aucune actualité trouvée.")
@@ -594,17 +580,11 @@ if ticker:
                 st.session_state.tickers_comparateurs = []
 
             places_restantes = 2 - len(st.session_state.tickers_comparateurs)
-
             st.markdown("---")
             st.subheader("🔍 Ajouter une entreprise au comparateur")
             
             if places_restantes > 0:
-                search_comp = st.text_input(
-                    f"Rechercher par nom ou ticker (Il vous reste {places_restantes} emplacement(s)) :", 
-                    value="", 
-                    key="search_comp_input"
-                )
-                
+                search_comp = st.text_input(f"Rechercher par nom ou ticker (Il vous reste {places_restantes} emplacement(s)) :", value="", key="search_comp_input")
                 if search_comp:
                     try:
                         quotes_comp = fetch_search_results(search_comp)
@@ -612,7 +592,6 @@ if ticker:
                             options_comp = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes_comp]
                             selected_comp = st.selectbox("Sélectionnez l'entreprise à ajouter :", options_comp, key="select_comp_box")
                             ticker_to_add = selected_comp.split(" - ")[0]
-                            
                             if st.button(f"➕ Ajouter {ticker_to_add} au tableau", key="btn_add_ticker"):
                                 if ticker_to_add == ticker:
                                     st.warning("Cette entreprise est déjà l'entreprise principale affichée.")
@@ -626,7 +605,7 @@ if ticker:
                     except Exception as e:
                         st.error(f"Erreur de recherche : {e}")
             else:
-                st.info("💡 Vous avez atteint la limite de 3 entreprises (l'entreprise principale + 2 comparaisons). Supprimez-en une pour en ajouter une nouvelle.")
+                st.info("💡 Vous avez atteint la limite de 3 entreprises.")
 
             if st.session_state.tickers_comparateurs:
                 st.write("**Entreprises ajoutées pour la comparaison :**")
@@ -638,20 +617,16 @@ if ticker:
                         st.rerun()
 
             liste_finale_tickers = [ticker] + st.session_state.tickers_comparateurs
-
             if len(liste_finale_tickers) < 2:
                 st.info("💡 Utilisez la barre de recherche ci-dessus pour ajouter au moins une entreprise à juxtaposer.")
             else:
                 donnees_comparatives = {}
-
                 with st.spinner("Extraction et alignement des données financières..."):
                     for t_name in liste_finale_tickers:
                         try:
                             info_comp = get_ticker_info(t_name)
-                            
                             if info_comp and ("currency" in info_comp or "currencySymbol" in info_comp):
                                 devise_comp = info_comp.get("currencySymbol") or info_comp.get("currency") or ""
-                                
                                 donnees_comparatives[t_name] = {
                                     "Nom": info_comp.get("longName", "N/A"),
                                     "Secteur": info_comp.get("sector", "N/A"),
@@ -666,8 +641,6 @@ if ticker:
                                     "Rendement Div.": f"{info_comp.get('dividendYield', 0):.2f}%" if info_comp.get('dividendYield') else "0.00%",
                                     "Debt/Equity": f"{info_comp.get('debtToEquity', 0):.2f}%" if info_comp.get('debtToEquity') else "N/A",
                                 }
-                            else:
-                                st.error(f"Impossible de récupérer des données valides pour {t_name}")
                         except Exception as e:
                             st.error(f"Erreur sur le ticker {t_name} : {e}")
 
@@ -679,171 +652,71 @@ if ticker:
 
         with tab7:
             st.title(f"📈 Graphique Historique : {company_name}")
-            st.write(f"Analyse technique visuelle pour **{ticker}**.")
-
-            periode_choisie = st.selectbox(
-                "Période du graphique :",
-                options=["1 mois", "3 mois", "6 mois", "1 an", "2 ans", "5 ans"],
-                index=3, 
-                key="graph_period_selector"
-            )
-
-            mapping_periodes = {
-                "1 mois": "1mo",
-                "3 mois": "3mo",
-                "6 mois": "6mo",
-                "1 an": "1y",
-                "2 ans": "2y",
-                "5 ans": "5y"
-            }
+            periode_choisie = st.selectbox("Période du graphique :", options=["1 mois", "3 mois", "6 mois", "1 an", "2 ans", "5 ans"], index=3, key="graph_period_selector")
+            mapping_periodes = {"1 mois": "1mo", "3 mois": "3mo", "6 mois": "6mo", "1 an": "1y", "2 ans": "2y", "5 ans": "5y"}
             yf_period = mapping_periodes[periode_choisie]
 
             try:
                 df_history = action.history(period=yf_period)
-
                 if not df_history.empty:
                     fig = go.Figure(data=[go.Candlestick(
-                        x=df_history.index,
-                        open=df_history['Open'],
-                        high=df_history['High'],
-                        low=df_history['Low'],
-                        close=df_history['Close'],
-                        name=ticker,
-                        increasing=dict(line_color='#26a69a', fillcolor='#26a69a'), 
-                        decreasing=dict(line_color='#ef5350', fillcolor='#ef5350')  
+                        x=df_history.index, open=df_history['Open'], high=df_history['High'], low=df_history['Low'], close=df_history['Close'], name=ticker,
+                        increasing=dict(line_color='#26a69a', fillcolor='#26a69a'), decreasing=dict(line_color='#ef5350', fillcolor='#ef5350')
                     )])
-
                     fig.update_layout(
-                        margin=dict(l=10, r=10, t=10, b=10),
-                        height=500, 
-                        paper_bgcolor='#fffdf4',  
-                        plot_bgcolor='white',     
-                        xaxis_rangeslider_visible=True,  
-                        xaxis=dict(
-                            gridcolor='#f0f0f0',
-                            tickfont=dict(color='black')
-                        ),
-                        yaxis=dict(
-                            gridcolor='#f0f0f0',
-                            side="right",  
-                            tickfont=dict(color='black')
-                        ),
-                        hovermode="x unified"  
+                        margin=dict(l=10, r=10, t=10, b=10), height=500, paper_bgcolor='#fffdf4', plot_bgcolor='white', xaxis_rangeslider_visible=True,
+                        xaxis=dict(gridcolor='#f0f0f0', tickfont=dict(color='black')), yaxis=dict(gridcolor='#f0f0f0', side="right", tickfont=dict(color='black')), hovermode="x unified"
                     )
-
                     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
                 else:
                     st.warning("Aucune donnée historique trouvée pour cette période.")
             except Exception as e:
                 st.error(f"Erreur lors de la génération du graphique : {e}")
 
-        # --- NOUVEL ONGLET ADAPTÉ ET ALIGNÉ ---
         with tab8:
             st.title("🌍 Marchés & Indices Populaires")
-
+            
             popular_markets = {
-                "📈 **Indices**": {
-                    "CAC 40": "^FCHI",
-                    "Nasdaq": "^IXIC",
-                    "S&P 500": "^GSPC",
-                    "Dow Jones": "^DJI",
-                    "Euro Stoxx 50": "^STOXX50E"
-                },
-                "🛢️ **Matières Premières**": {
-                    "Or (Once)": "GC=F",
-                    "Pétrole Brent": "BZ=F",
-                    "Pétrole WTI": "CL=F",
-                    "Cuivre": "HG=F",
-                    "Argent": "SI=F"
-                },
-                "💵 **Obligations**": {
-                    "OAT 2 ans": "BOURSORAMA_OAT_2Y",  # Ticker personnalisé pour notre plan B
-                    "OAT 10 ans": "BOURSORAMA_OAT_10Y", # Ticker personnalisé pour notre plan B
-                    "US 2y": "^TNX",
-                    "US 10y": "^TYX"
-                },
-                "💱 **Devises**": {
-                    "EUR/USD": "EURUSD=X",
-                    "USD/JPY": "USDJPY=X",
-                    "GBP/USD": "GBPUSD=X",
-                    "USD/CHF": "USDCHF=X",
-                    "AUD/USD": "AUDUSD=X"
-                }
+                "📈 **Indices**": {"CAC 40": "^FCHI", "Nasdaq": "^IXIC", "S&P 500": "^GSPC", "Dow Jones": "^DJI", "Euro Stoxx 50": "^STOXX50E"},
+                "🛢️ **Matières Premières**": {"Or (Once)": "GC=F", "Pétrole Brent": "BZ=F", "Pétrole WTI": "CL=F", "Cuivre": "HG=F", "Argent": "SI=F"},
+                "💵 **Obligations**": {"OAT 2 ans": "FR2YT=RR", "OAT 10 ans": "FR10YT=RR", "US 2y": "^TNX", "US 10y": "^TYX"},
+                "💱 **Devises**": {"EUR/USD": "EURUSD=X", "USD/JPY": "USDJPY=X", "GBP/USD": "GBPUSD=X", "USD/CHF": "USDCHF=X", "AUD/USD": "AUDUSD=X"}
             }
 
-            # Fonction de secours pour scraper BoursoBank si Yahoo fait la gueule
-            def fetch_oat_from_boursorama(url_url):
-                try:
-                    req = urllib.request.Request(url_url, headers={'User-Agent': 'Mozilla/5.0'})
-                    html = urllib.request.urlopen(req).read().decode('utf-8')
-                    # Recherche de la valeur de la ligne principale du cours
-                    match = re.search(r'data-purify-html="([^"]+)"', html)
-                    if match:
-                        val = match.group(1).strip().replace(' ', '').replace(',', '.')
-                        return float(val)
-                    # Deuxième pattern de secours Bourso
-                    match_fallback = re.search(r'<span class="c-instrument c-instrument--last">([^<]+)</span>', html)
-                    if match_fallback:
-                        val = match_fallback.group(1).strip().replace(' ', '').replace(',', '.')
-                        return float(val)
-                except:
-                    pass
-                return None
-
-            @st.cache_data(ttl=300)  
-            def get_market_data(ticker_market):
-                # ----------------------------------------------------------------------
-                # GESTION DES OAT VIA BOURSORAMA (PLAN B ULTRA FIABLE)
-                # ----------------------------------------------------------------------
-                if "BOURSORAMA_OAT" in ticker_market:
-                    url = "https://www.boursorama.com/bourse/taux/cours/2xFR001400H6A7/" if "2Y" in ticker_market else "https://www.boursorama.com/bourse/taux/cours/2xFR001400NDK4/"
-                    price_oat = fetch_oat_from_boursorama(url)
-                    if price_oat:
-                        return {
-                            "price": f"{price_oat:.2f}%",
-                            "change": "--",  # Bourso varie peu en intraday pour les particuliers
-                            "color": "green"
-                        }
-                    return None
-
-                # ----------------------------------------------------------------------
-                # LOGIQUE RESTE DES ACTIFS VIA YAHOO FINANCE
-                # ----------------------------------------------------------------------
+            # Cache de 4 heures (14400 secondes) pour éviter de saturer Yahoo à chaque actualisation
+            @st.cache_data(ttl=14400)  
+            def get_market_data_light(ticker_market):
                 try:
                     stock = yf.Ticker(ticker_market)
-                    hist = stock.history(period="5d")
+                    info = stock.info
                     
-                    if not hist.empty and len(hist) >= 2:
-                        last_price = hist['Close'].iloc[-1]
-                        prev_close = hist['Close'].iloc[-2]
-                        
-                        # Pour les taux US, le cours est multiplié par 10 dans Yahoo (ex: 4.43 au lieu de 44.3)
-                        if ticker_market in ["^TNX", "^TYX"]:
-                            last_price = last_price / 10
-                            prev_close = prev_close / 10
-                        
+                    # Récupération directe sans historique (plus rapide, plus léger)
+                    last_price = info.get('regularMarketPrice') or info.get('currentPrice') or info.get('previousClose') or info.get('navPrice')
+                    prev_close = info.get('regularMarketPreviousClose')
+                    
+                    if last_price and prev_close and prev_close != 0:
                         change_pct = ((last_price - prev_close) / prev_close) * 100
-                        
-                        # Ajout du symbole % automatique pour les rendements obligataires US (TNX / TYX)
-                        suffixe = "%" if ticker_market in ["^TNX", "^TYX"] else ""
-                        
                         return {
-                            "price": f"{last_price:.2f}{suffixe}",
+                            "price": f"{last_price:.2f}",
                             "change": f"{change_pct:+.2f}%",
                             "color": "green" if change_pct >= 0 else "red"
                         }
+                    elif last_price:
+                        return {
+                            "price": f"{last_price:.2f}",
+                            "change": "0.00%",
+                            "color": "green"
+                        }
                     return None
                 except:
                     return None
 
-            # Affichage des catégories et des cartes d'actifs
             for category, tickers_dict in popular_markets.items():
                 st.subheader(category)
                 cols = st.columns(3)  
-
                 for idx, (name, tk) in enumerate(tickers_dict.items()):
                     with cols[idx % 3]:
-                        data = get_market_data(tk)
+                        data = get_market_data_light(tk)
                         if data:
                             st.markdown(f"""
                             <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid {data['color']}; margin-bottom: 10px;">
@@ -856,10 +729,9 @@ if ticker:
                             st.markdown(f"""
                             <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid #cccccc; margin-bottom: 10px;">
                                 <strong>{name}</strong><br>
-                                <span style="font-size: 14px; color: #777777;">Données indisponibles (N/A)</span>
+                                <span style="font-size: 16px; color: #777777;">Données indisponibles (N/A)</span>
                             </div>
                             """, unsafe_allow_html=True)
-
                 st.divider()
 
     except Exception as e:
