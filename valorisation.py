@@ -130,23 +130,35 @@ def fetch_search_results(query):
     except:
         return []
 
-# 1. Le formulaire bloque toujours la saisie frénétique au clavier
+# ==============================================================================
+# 1. INITIALISATION DE LA RECHERCHE PAR DÉFAUT (NVIDIA) AU TOUT PREMIER DÉMARRAGE
+# ==============================================================================
+if 'last_search' not in st.session_state:
+    st.session_state.last_search = "Nvidia"
+    initial_text = "Nvidia"
+else:
+    initial_text = ""
+
+# ==============================================================================
+# 2. LE BLOC DE FORMULAIRE (BLOQUE LA FRAISSE EN DIRECT AU CLAVIER)
+# ==============================================================================
 with st.form(key="search_form"):
     search_query_input = st.text_input(
         "Rechercher une entreprise (Nom ou Ticker) :", 
-        value="Nvidia",
-        help="Tapez votre recherche puis appuyez sur Entrée ou sur Valider."
+        value=initial_text,
+        help="Tapez votre recherche puis appuyez sur Entrée ou sur le bouton Valider."
     )
     submit_button = st.form_submit_button(label="🔍 Valider")
 
-# Si l'utilisateur clique sur Valider, on enregistre sa recherche en mémoire
+# Si l'utilisateur valide une nouvelle saisie, on met à jour la mémoire globale
 if submit_button and search_query_input:
     st.session_state.last_search = search_query_input
 
-# 2. On effectue la recherche basée sur ce qui est en mémoire (Nom ou Ticker)
+# ==============================================================================
+# 3. EXÉCUTION DE LA RECHERCHE VIA L'API (RECONNAÎT LES MOTS ET LES TICKERS)
+# ==============================================================================
 if 'last_search' in st.session_state and st.session_state.last_search:
-    # On vérifie si on doit déclencher l'API (nouvelle recherche)
-    # Pour éviter de requêter à chaque clic d'onglet, on stocke un historique
+    # On ne lance l'API que si la recherche a réellement changé, pour éviter de saturer
     if 'current_api_search' not in st.session_state or st.session_state.current_api_search != st.session_state.last_search:
         try:
             quotes = fetch_search_results(st.session_state.last_search)
@@ -159,17 +171,18 @@ if 'last_search' in st.session_state and st.session_state.last_search:
         except:
             st.session_state.search_options = []
 
-# 3. Affichage du menu déroulant (Reconnaît les mots et propose les entreprises)
+# ==============================================================================
+# 4. AFFICHAGE DU MENU DÉROULANT ET EXTRACTION DU TICKER (STABLE ET PERSISTANT)
+# ==============================================================================
 if 'search_options' in st.session_state and st.session_state.search_options:
     selected = st.selectbox("Sélectionnez l'entreprise :", st.session_state.search_options)
     ticker = selected.split(" - ")[0]
 else:
-    # Si l'API n'a rien donné mais qu'on a tapé un truc, on tente le Ticker brut en secours
+    # Option de secours si l'API n'a rien renvoyé mais qu'on a forcé un ticker brut
     ticker = st.session_state.get('last_search', '').upper() if 'last_search' in st.session_state else None
 
 if 'last_search' not in st.session_state:
     ticker = None
-            
 
 
 # Mémorise les données globales pendant 24 heure
