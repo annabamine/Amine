@@ -221,7 +221,7 @@ if ticker:
         with col3:
             st.write(f"**ROE** : {infos.get('returnOnEquity', 0) * 100:.1f} %" if infos.get('returnOnEquity') else "**ROE** : N/A")
             st.write(f"**ROA** : {infos.get('returnOnAssets', 0) * 100:.1f} %" if infos.get('returnOnAssets') else "**ROA** : N/A")
-            st.write(f"**Dividend Yield** : {infos.get('dividendYield', 0):.2f} %" if infos.get('dividendYield') else "**Dividend Yield** : N/A")
+            st.write(f"**Dividend Yield** : {infos.get('dividendYield', 0):.2f}" if infos.get('dividendYield') else "**Dividend Yield** : N/A")
             st.write(f"**Price/Book** : {infos.get('priceToBook', 'N/A')}")
             total_debt = infos.get("totalDebt")
             if fcf and total_debt and fcf > 0:
