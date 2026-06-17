@@ -523,57 +523,58 @@ if ticker:
             st.write(f"Accédez directement aux documents officiels déposés par **{company_name} ({ticker})**.")
 
             try:
-                # 1. Récupération des rapports via la fonction native de yfinance
-                filings = action.sec_filings
-                
-                if filings and isinstance(filings, list):
-                    # On cherche le document le plus récent qui soit un 10-K (Annuel) ou 10-Q (Trimestriel)
-                    rapport_trouve = None
-                    for f in filings:
-                        type_doc = f.get("type", "").upper()
-                        if type_doc in ["10-K", "10-Q"]:
-                            rapport_trouve = f
-                            break # On s'arrête au premier trouvé
-                    
-                    if rapport_trouve:
-                        type_doc = rapport_trouve.get("type")
-                        date_publication = rapport_trouve.get("epochDate")
-                        url_document = rapport_trouve.get("url")
-                        
-                        # Formatage sécurisé de la date
-                        date_texte = ""
-                        if date_publication:
-                            try:
-                                from datetime import datetime
-                                # On force la conversion en entier au cas où c'est un string
-                                date_texte = f"publié le {datetime.fromtimestamp(int(date_publication)).strftime('%d/%m/%Y')}"
-                            except:
-                                # Sécurité si Yahoo envoie une date sous un autre format (ex: "2026-03-11")
-                                date_texte = f"publié le {date_publication}"
+                # 1. Récupérer les filings via la méthode de yfinance
+                filings = action.get_sec_filings()
 
-                        st.success(f"✅ Dernier rapport officiel **{type_doc}** trouvé ({date_texte}).")
-                        
-                        # 2. Le bouton cliquable enfin libéré !
-                        if url_document:
-                            st.link_button(
-                                label=f"🚀 Ouvrir le rapport {type_doc} officiel (PDF / HTML)",
-                                url=url_document,
-                                use_container_width=True,
-                                help="Cliquez pour consulter le document original sur le site de la SEC."
-                            )
-                        else:
-                            st.warning("⚠️ Le document a été trouvé mais aucun lien de téléchargement direct n'est disponible.")
-                        
-                    else:
-                        st.info("💡 Aucun rapport récent de type 10-K ou 10-Q n'a été trouvé pour ce ticker.")
-                        st.link_button("🔍 Rechercher manuellement sur SEC EDGAR", f"https://www.sec.gov/edgar/browse/?CIK={ticker}")
-                else:
-                    st.warning("⚠️ Les rapports SEC ne sont pas disponibles directement pour cette entreprise (Fréquent pour les actions hors-USA).")
-                    st.link_button("🌐 Visiter le site Relations Investisseurs", infos.get("website", "https://google.com"))
-            
-            except Exception as e:
-                st.error(f"Impossible de récupérer les rapports financiers : {e}")
-                                         
+                if filings is not None and len(filings) > 0:
+                   # Filtrer pour 10-K et 10-Q uniquement
+                 sec_filings = filings[filings['Type'].isin(['10-K', '10-Q'])]
+
+        if not sec_filings.empty:
+            # Prendre le plus récent
+            latest_filing = sec_filings.iloc[0]
+            filing_type = latest_filing['Type']
+            filing_date = latest_filing['Date']
+            filing_url = latest_filing.get('Url', None)
+
+            # Conversion sécurisée en datetime pour éviter le crash du .strftime() si c'est un str
+            try:
+                dt_obj = pd.to_datetime(filing_date)
+                date_texte = f"publié le {dt_obj.strftime('%d/%m/%Y')}"
+            except:
+                date_texte = f"publié le {filing_date}"
+
+            st.success(f"✅ Dernier rapport **{filing_type}** trouvé ({date_texte}).")
+
+            # 2. Bouton pour ouvrir le rapport
+            if filing_url:
+                st.link_button(
+                    label=f"🚀 Ouvrir le {filing_type} sur SEC EDGAR",
+                    url=filing_url,
+                    use_container_width=True,
+                    help="Lien direct vers le document officiel."
+                )
+            else:
+                # Solution de secours : construction de l'URL
+                cik = infos.get('symbol') or ticker
+                sec_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/"
+                st.link_button(
+                    label=f"🔍 Voir les filings de {ticker} sur SEC EDGAR",
+                    url=sec_url,
+                    use_container_width=True,
+                    help="Recherchez manuellement le rapport sur le site de la SEC."
+                )
+        else:
+            st.info("💡 Aucun rapport 10-K ou 10-Q récent trouvé.")
+            st.link_button("🌐 Rechercher sur SEC EDGAR", f"https://www.sec.gov/edgar/browse/?CIK={ticker}")
+    else:
+        st.warning("⚠️ Aucune donnée SEC disponible pour cette entreprise (souvent le cas pour les actions hors USA).")
+        st.link_button("🌐 Visiter le site Relations Investisseurs", infos.get("website", "https://google.com"))
+
+except Exception as e:
+    st.error(f"⚠️ Impossible de récupérer les rapports : {str(e)}")
+    st.link_button("🔍 Rechercher manuellement sur SEC EDGAR", f"https://www.sec.gov/edgar/browse/?CIK={ticker}")
+    
 
             st.subheader("💰 Derniers Versements")
             divs = action.dividends
