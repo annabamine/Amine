@@ -8,16 +8,6 @@ from datetime import datetime
 import plotly.graph_objects as go
 
 # 1. Toujours en premier
-st.set_page_config(page_title="Value Qimport streamlit as st
-import yfinance as yf
-import matplotlib.pyplot as plt
-import feedparser
-import base64
-import pandas as pd
-from datetime import datetime
-import plotly.graph_objects as go
-
-# 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
 
 # 2. Barre de titre (Logique Logo + HTML)
