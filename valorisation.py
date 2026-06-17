@@ -735,7 +735,7 @@ if ticker:
             except Exception as e:
                 st.error(f"Erreur lors de la génération du graphique : {e}")
 
-        # --- NOUVEL ONGLET ADAPTÉ ET ALIGNÉ ---
+        # --- NOUVEL ONGLET RÉINDENTÉ ET ALIGNÉ ---
         with tab8:
             st.title("🌍 Marchés & Indices Populaires")
 
@@ -758,8 +758,7 @@ if ticker:
                     "OAT 2 ans": "FR2YT=RR",
                     "OAT 10 ans": "FR10YT=RR",
                     "US 2y": "^TNX",
-                    "US 10y": "^TYX",
-                    "Spread OAT-Bund": "BUND=F,FR10YT=RR"  
+                    "US 10y": "^TYX"
                 },
                 "💱 **Devises**": {
                     "EUR/USD": "EURUSD=X",
@@ -774,19 +773,37 @@ if ticker:
             def get_market_data(ticker_market):
                 try:
                     stock = yf.Ticker(ticker_market)
-                    hist = stock.history(period="1d")
-                    if not hist.empty:
+                    
+                    # On récupère 5 jours pour être sûr d'avoir la veille (utile pendant les week-ends)
+                    hist = stock.history(period="5d")
+                    
+                    if not hist.empty and len(hist) >= 2:
                         last_price = hist['Close'].iloc[-1]
-                        prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else last_price
+                        prev_close = hist['Close'].iloc[-2]
                         change_pct = ((last_price - prev_close) / prev_close) * 100
                         return {
                             "price": f"{last_price:.2f}",
                             "change": f"{change_pct:+.2f}%",
                             "color": "green" if change_pct >= 0 else "red"
                         }
+                    
+                    # Plan B pour les obligations européennes (OAT) qui ne répondent pas sur .history()
+                    else:
+                        info = stock.info
+                        last_price = info.get('regularMarketPrice') or info.get('previousClose') or info.get('navPrice')
+                        if last_price:
+                            prev_close = info.get('regularMarketPreviousClose') or last_price
+                            change_pct = ((last_price - prev_close) / prev_close) * 100 if prev_close != last_price else 0.0
+                            return {
+                                "price": f"{last_price:.2f}",
+                                "change": f"{change_pct:+.2f}%" if change_pct != 0 else "0.00%",
+                                "color": "green" if change_pct >= 0 else "red"
+                            }
+                    return None
                 except:
                     return None
 
+            # Affichage des catégories et des cartes d'actifs
             for category, tickers_dict in popular_markets.items():
                 st.subheader(category)
                 cols = st.columns(3)  
@@ -796,16 +813,22 @@ if ticker:
                         data = get_market_data(tk)
                         if data:
                             st.markdown(f"""
-                            <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid {data['color']};">
+                            <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid {data['color']}; margin-bottom: 10px;">
                                 <strong>{name}</strong><br>
                                 <span style="font-size: 18px; font-weight: bold;">{data['price']}</span>
-                                <span style="color: {data['color']}; margin-left: 5px;">{data['change']}</span>
+                                <span style="color: {data['color']}; margin-left: 5px; font-weight: bold;">{data['change']}</span>
                             </div>
                             """, unsafe_allow_html=True)
                         else:
-                            st.info(f"{name}: N/A")
+                            # Rendu propre en gris pour les cas N/A au lieu d'un gros composant st.info encombrant
+                            st.markdown(f"""
+                            <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid #cccccc; margin-bottom: 10px;">
+                                <strong>{name}</strong><br>
+                                <span style="font-size: 16px; color: #777777;">Données indisponibles (N/A)</span>
+                            </div>
+                            """, unsafe_allow_html=True)
 
-                st.divider()  
+                st.divider()
 
     except Exception as e:
         st.error(f"Erreur globale avec {ticker} : {e}")
