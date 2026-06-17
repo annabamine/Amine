@@ -130,13 +130,11 @@ def fetch_search_results(query):
     except:
         return []
 
-search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Nvidia", key="main_search_query")
-
 # 1. Le formulaire bloque la saisie en direct (Mon approche)
 with st.form(key="search_form"):
     search_query = st.text_input(
         "Rechercher une entreprise (Nom ou Ticker) :", 
-        value="",
+        value="Nvidia",
         help="Tapez votre recherche puis appuyez sur Entrée ou sur Valider."
     )
     submit_button = st.form_submit_button(label="🔍 Valider")
