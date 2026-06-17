@@ -134,7 +134,7 @@ def fetch_search_results(query):
 with st.form(key="search_form"):
     search_query_input = st.text_input(
         "Rechercher une entreprise (Nom ou Ticker) :", 
-        value="",
+        value="Nvidia",
         help="Tapez votre recherche puis appuyez sur Entrée ou sur Valider."
     )
     submit_button = st.form_submit_button(label="🔍 Valider")
