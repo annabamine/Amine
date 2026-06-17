@@ -359,7 +359,7 @@ if ticker:
                         "Market Cap": f"{i.get('marketCap', 0)/1e9:.2f} Mds" if i.get('marketCap') else "N/A",
                         "PER": i.get("trailingPE", "N/A"),
                         "Sector": i.get("sector", "N/A"),
-                        "Dividend Yield": f"{i.get('dividendYield', 0):.2%}" if i.get('dividendYield') else "N/A"
+                        "Dividend Yield": f"{i.get('dividendYield', 0):.2f%}" if i.get('dividendYield') else "N/A"
                     }
                 time.sleep(0.5)
             if comparison_data:
