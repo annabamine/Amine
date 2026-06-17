@@ -132,20 +132,41 @@ def fetch_search_results(query):
 
 search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Nvidia", key="main_search_query")
 
-if search_query:
-    try:
-        quotes = fetch_search_results(search_query)
-        if quotes:
-            options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
-            selected = st.selectbox("Sélectionnez l'entreprise :", options)
-            ticker = selected.split(" - ")[0]
-        else:
-            st.warning(f"Aucun résultat pour '{search_query}'")
-            ticker = None
-    except:
-        ticker = search_query.upper()
+# 1. Le formulaire bloque la saisie en direct (Mon approche)
+with st.form(key="search_form"):
+    search_query = st.text_input(
+        "Rechercher une entreprise (Nom ou Ticker) :", 
+        value="",
+        help="Tapez votre recherche puis appuyez sur Entrée ou sur Valider."
+    )
+    submit_button = st.form_submit_button(label="🔍 Valider")
+
+# 2. La logique s'exécute uniquement au clic/Entrée (Fusion avec la mémoire de Mistral)
+if submit_button and search_query:
+    # On vérifie si la recherche est différente de la dernière validée
+    if 'last_search' not in st.session_state or st.session_state.last_search != search_query:
+        st.session_state.last_search = search_query
+        try:
+            quotes = fetch_search_results(search_query)
+            if quotes:
+                st.session_state.search_options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
+            else:
+                st.session_state.search_options = []
+                st.warning(f"Aucun résultat pour '{search_query}'")
+        except:
+            st.session_state.search_options = []
+
+# 3. Affichage du menu de sélection (Stable et persistant hors du formulaire)
+if 'search_options' in st.session_state and st.session_state.search_options:
+    selected = st.selectbox("Sélectionnez l'entreprise :", st.session_state.search_options)
+    ticker = selected.split(" - ")[0]
 else:
+    # Option de secours si l'utilisateur a tapé directement un ticker valide (ex: AAPL) et validé
+    ticker = st.session_state.get('last_search', '').upper() if 'last_search' in st.session_state else None
+
+if not search_query and 'last_search' not in st.session_state:
     ticker = None
+
 
 # Mémorise les données globales pendant 24 heure
 @st.cache_data(ttl=86400)
