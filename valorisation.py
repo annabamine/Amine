@@ -520,7 +520,6 @@ if ticker:
 
 
             st.title("📂 Rapports Financiers Officiels (SEC Filings)")
-                        st.title("📂 Rapports Financiers Officiels (SEC Filings)")
             st.write(f"Accédez directement aux documents officiels déposés par **{company_name} ({ticker})**.")
 
             try:
