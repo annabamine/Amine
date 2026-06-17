@@ -512,6 +512,55 @@ if ticker:
                 st.write("**Avis Global**")
                 st.write(f" {reco}")
 
+
+            st.title("📂 Rapports Financiers Officiels (SEC Filings)")
+            st.write(f"Accédez directement aux documents officiels déposés par **{company_name} ({ticker})**.")
+
+            try:
+                # 1. Récupération des rapports via la fonction native de yfinance
+                filings = action.sec_filings
+                
+                if filings and isinstance(filings, list):
+                    # On cherche le document le plus récent qui soit un 10-K (Annuel) ou 10-Q (Trimestriel)
+                    rapport_trouve = None
+                    for f in filings:
+                        type_doc = f.get("type", "").upper()
+                        if type_doc in ["10-K", "10-Q"]:
+                            rapport_trouve = f
+                            break # On s'arrête au premier trouvé car classés du plus récent au plus ancien
+                    
+                    if rapport_trouve:
+                        type_doc = rapport_trouve.get("type")
+                        date_publication = rapport_trouve.get("epochDate")
+                        url_document = rapport_trouve.get("url")
+                        
+                        # Formatage de la date
+                        date_texte = ""
+                        if date_publication:
+                            from datetime import datetime
+                            date_texte = f"publié le {datetime.fromtimestamp(date_publication).strftime('%d/%m/%Y')}"
+
+                        st.success(f"✅ Dernier rapport officiel **{type_doc}** trouvé ({date_texte}).")
+                        
+                        # 2. Le bouton cliquable
+                        st.link_button(
+                            label=f"🚀 Ouvrir le rapport {type_doc} officiel (PDF / HTML)",
+                            url=url_document,
+                            use_container_width=True,
+                            help="Cliquez pour consulter le document original sur le site de la SEC."
+                        )
+                        
+                    else:
+                        st.info("💡 Aucun rapport récent de type 10-K ou 10-Q n'a été trouvé pour ce ticker.")
+                        st.link_button("🔍 Rechercher manuellement sur SEC EDGAR", f"https://www.sec.gov/edgar/browse/?CIK={ticker}")
+                else:
+                    st.warning("⚠️ Les rapports SEC ne sont pas disponibles directement pour cette entreprise (Fréquent pour les actions hors-USA).")
+                    st.link_button("🌐 Visiter le site Relations Investisseurs", infos.get("website", "https://google.com"))
+            
+            except Exception as e:
+                st.error(f"Impossible de récupérer les rapports financiers : {e}")
+                
+
             st.subheader("💰 Derniers Versements")
             divs = action.dividends
             if not divs.empty:
