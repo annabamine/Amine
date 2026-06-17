@@ -391,7 +391,10 @@ if ticker:
             "Indices": {"CAC 40": "^FCHI", "Nasdaq": "^IXIC", "S&P 500": "^GSPC", "Dow Jones": "^DJI"},
             "Matières Premières": {"Or": "GC=F", "Pétrole Brent": "BZ=F", "Pétrole WTI": "CL=F"},
             "Devises": {"EUR/USD": "EURUSD=X", "USD/JPY": "USDJPY=X", "GBP/USD": "GBPUSD=X"}
-        }
+            "💵 **Obligations US**": {  # <-- NOUVEAU BLOC (2 tickers uniquement)
+                 "US 2y": "^TNX",
+                 "US 10y": "^TYX"
+            }
         for category, items in markets.items():
             st.subheader(category)
             cols = st.columns(len(items))
