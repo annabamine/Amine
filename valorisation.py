@@ -395,6 +395,7 @@ if ticker:
                  "US 2y": "^TNX",
                  "US 10y": "^TYX"
             }
+        }
         for category, items in markets.items():
             st.subheader(category)
             cols = st.columns(len(items))
