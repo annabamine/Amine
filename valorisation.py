@@ -366,38 +366,44 @@ if ticker:
                 st.dataframe(pd.DataFrame(comparison_data).T, use_container_width=True)
 
     with tab7:
-    st.title(f"📈 Graphique : {company_name}")
-    period = st.selectbox("Période", ["1mo", "3mo", "6mo", "1y", "2y", "5y"], index=3)
+        st.title(f"📈 Graphique : {company_name}")
+        period = st.selectbox("Période", ["1mo", "3mo", "6mo", "1y", "2y", "5y"], index=3)
 
-    # Mapping des périodes en jours
-    period_days = {
-        "1mo": 30,
-        "3mo": 90,
-        "6mo": 180,
-        "1y": 365,
-        "2y": 730,
-        "5y": 1825
-    }
+        # Mapping des périodes en jours
+        period_days = {
+            "1mo": 30,
+            "3mo": 90,
+            "6mo": 180,
+            "1y": 365,
+            "2y": 730,
+            "5y": 1825
+        }
 
-    try:
-        df = hist_full.tail(period_days[period])  # ✅ Correction ici
-        if not df.empty:
-            fig = go.Figure(data=[go.Candlestick(
-                x=df.index, open=df['Open'], high=df['High'],
-                low=df['Low'], close=df['Close'],
-                increasing_line_color='#26a69a', decreasing_line_color='#ef5350'
-            )])
-            fig.update_layout(
-                height=500, paper_bgcolor='#fffdf4', plot_bgcolor='white',
-                xaxis_rangeslider_visible=True, hovermode="x unified"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Aucune donnée historique.")
-    except Exception as e:
-        st.error(f"Erreur graphique : {e}")
+        try:
+            df = hist_full.tail(period_days[period])
+            if not df.empty:
+                fig = go.Figure(data=[go.Candlestick(
+                    x=df.index,
+                    open=df['Open'],
+                    high=df['High'],
+                    low=df['Low'],
+                    close=df['Close'],
+                    increasing_line_color='#26a69a',
+                    decreasing_line_color='#ef5350'
+                )])
+                fig.update_layout(
+                    height=500,
+                    paper_bgcolor='#fffdf4',
+                    plot_bgcolor='white',
+                    xaxis_rangeslider_visible=True,
+                    hovermode="x unified"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("Aucune donnée historique.")
+        except Exception as e:
+            st.error(f"Erreur graphique : {e}")
 
-    
     with tab8:
         st.title("🌍 Marchés Populaires")
         markets = {
@@ -417,7 +423,7 @@ if ticker:
                 "USD/JPY": "USDJPY=X",
                 "GBP/USD": "GBPUSD=X"
             },
-            "💵 **Obligations US**": {  # <-- NOUVEAU BLOC INTÉGRÉ
+            "💵 **Obligations US**": {
                 "US 2y": "^TNX",
                 "US 10y": "^TYX"
             }
