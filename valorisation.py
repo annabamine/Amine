@@ -129,18 +129,15 @@ def fetch_search_results(query):
         return search_results.quotes
     except:
         return []
-        
-search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "NVDA", key="main_search_query")
 
-if search_query and len(search_query) >= 3:
+search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Nvidia", key="main_search_query")
+
+if search_query:
     try:
-        # C'EST ICI : On ajoute .lower() pour harmoniser la recherche en minuscules
-        search_clean = search_query.lower()
-        
-        quotes = fetch_search_results(search_clean)
+        quotes = fetch_search_results(search_query)
         if quotes:
             options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
-            selected = st.selectbox("Sélectionnez l'entreprise :", options, key=f"selectbox_{search_clean}")
+            selected = st.selectbox("Sélectionnez l'entreprise :", options)
             ticker = selected.split(" - ")[0]
         else:
             st.warning(f"Aucun résultat pour '{search_query}'")
@@ -149,18 +146,15 @@ if search_query and len(search_query) >= 3:
         ticker = search_query.upper()
 else:
     ticker = None
-    if search_query and len(search_query) < 3:
-        st.info("💡 Veuillez taper au moins 3 caractères pour lancer la recherche.")
 
-
-# Mémorise les données globales pendant 24 heure
-@st.cache_data(ttl=86400)
+# Mémorise les données globales pendant 1 heure
+@st.cache_data(ttl=3600)
 def get_ticker_info(ticker_symbol):
     action = yf.Ticker(ticker_symbol)
     return action.info
 
-# Mémorise l'historique YTD pendant 24 heure
-@st.cache_data(ttl=86400)
+# Mémorise l'historique YTD pendant 1 heure
+@st.cache_data(ttl=3600)
 def get_ticker_ytd(ticker_symbol):
     action = yf.Ticker(ticker_symbol)
     return action.history(period="ytd")
@@ -281,14 +275,15 @@ if ticker:
             st.write("**Market Cap** : N/A")
 
         def format_valeur(valeur, devise):
-            if valeur is None or valeur == "N/A": return "N/A"
+            if valeur is None or valeur == "N/A": 
+                return "N/A"
             abs_val = abs(valeur)
             if abs_val >= 1_000_000_000:
-               return f"{valeur / 1_000_000_000:,.2f} Mds {devise}"
+                return f"{valeur / 1_000_000_000:,.2f} Mds {devise}"
             else:
-               return f"{valeur / 1_000_000:,.2f} M {devise}"  
+                return f"{valeur / 1_000_000:,.2f} M {devise}"  
             
-        # --- LOGIQUE DES ONGLETS MODIFIÉE POUR INCLURE LE TAB 6 ---
+        # --- DEFINITION DES 8 ONGLETS ---
         tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
             "📊 Ratios", 
             "💰 Rentabilité", 
@@ -296,9 +291,9 @@ if ticker:
             "📋 Earnings", 
             "🧠 Actualités", 
             "⚖️ Comparateur",
-            "📈 Graphique"
+            "📈 Graphique",
             "🌍 Marchés Populaires"
-])
+        ])
         
         with tab1:
             st.title("🔢 Ratios financiers")
@@ -359,9 +354,9 @@ if ticker:
 
                     gross_margin = infos.get("grossMargins")
                     if gross_margin is not None:
-                       st.write(f"**Gross Margin** : {gross_margin * 100:.1f} %")
+                        st.write(f"**Gross Margin** : {gross_margin * 100:.1f} %")
                     else:
-                       st.write("**Gross Margin** : N/A")
+                        st.write("**Gross Margin** : N/A")
                        
                     profit_margin = infos.get("profitMargins")
                     if profit_margin is not None:
@@ -585,24 +580,19 @@ if ticker:
             except Exception as e:
                 st.error(f"Erreur news : {e}")
 
-        # --- CONTENU DU TAB 6 : LE COMPARATEUR DYNAMIQUE ET INTUITIF ---
         with tab6:
             st.title("⚖️ Comparateur d'Entreprises")
             st.write(f"Comparez **{company_name} ({ticker})** avec les entreprises de votre choix (max 3 au total).")
 
-            # Initialisation de la liste des tickers comparés dans la session Streamlit
             if "tickers_comparateurs" not in st.session_state:
                 st.session_state.tickers_comparateurs = []
 
-            # L'entreprise principale est toujours incluse par défaut, on calcule les places restantes
-            # Max 3 au total = Ticker principal + 2 tickers ajoutés
             places_restantes = 2 - len(st.session_state.tickers_comparateurs)
 
             st.markdown("---")
             st.subheader("🔍 Ajouter une entreprise au comparateur")
             
             if places_restantes > 0:
-                # Utilisation de la même logique de recherche textuelle qu'au début du script
                 search_comp = st.text_input(
                     f"Rechercher par nom ou ticker (Il vous reste {places_restantes} emplacement(s)) :", 
                     value="", 
@@ -611,14 +601,12 @@ if ticker:
                 
                 if search_comp:
                     try:
-                        # On réutilise ta fonction de cache globale fetch_search_results
                         quotes_comp = fetch_search_results(search_comp)
                         if quotes_comp:
                             options_comp = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes_comp]
                             selected_comp = st.selectbox("Sélectionnez l'entreprise à ajouter :", options_comp, key="select_comp_box")
                             ticker_to_add = selected_comp.split(" - ")[0]
                             
-                            # Bouton pour valider l'ajout
                             if st.button(f"➕ Ajouter {ticker_to_add} au tableau", key="btn_add_ticker"):
                                 if ticker_to_add == ticker:
                                     st.warning("Cette entreprise est déjà l'entreprise principale affichée.")
@@ -634,7 +622,6 @@ if ticker:
             else:
                 st.info("💡 Vous avez atteint la limite de 3 entreprises (l'entreprise principale + 2 comparaisons). Supprimez-en une pour en ajouter une nouvelle.")
 
-            # Affichage et gestion de la liste des entreprises ajoutées
             if st.session_state.tickers_comparateurs:
                 st.write("**Entreprises ajoutées pour la comparaison :**")
                 for t_comp in st.session_state.tickers_comparateurs:
@@ -644,8 +631,6 @@ if ticker:
                         st.session_state.tickers_comparateurs.remove(t_comp)
                         st.rerun()
 
-            # --- CONSTITUTION ET AFFICHAGE DE LA MATRICE COMPARATIVE ---
-            # La liste finale contient toujours le ticker principal en premier
             liste_finale_tickers = [ticker] + st.session_state.tickers_comparateurs
 
             if len(liste_finale_tickers) < 2:
@@ -656,7 +641,6 @@ if ticker:
                 with st.spinner("Extraction et alignement des données financières..."):
                     for t_name in liste_finale_tickers:
                         try:
-                            # Utilisation de ton cache existant get_ticker_info
                             info_comp = get_ticker_info(t_name)
                             
                             if info_comp and ("currency" in info_comp or "currencySymbol" in info_comp):
@@ -687,21 +671,33 @@ if ticker:
                     st.subheader("📊 Matrice comparative complète")
                     st.dataframe(df_comparatif, use_container_width=True)
                     
+                    st.subheader("📈 Comparatif Visuel : PER vs Forward PER")
+                    
+                    graph_data = []
+                    for t_name, metrics in donnees_comparatives.items():
+                        t_per = metrics["PER (Trailing)"]
+                        t_fper = metrics["Forward PER"]
+                        
+                        graph_data.append({
+                            "Entreprise": t_name,
+                            "PER (Trailing)": t_per if isinstance(t_per, (int, float)) else 0,
+                            "Forward PER": t_fper if isinstance(t_fper, (int, float)) else 0
+                        })
+                    
+                    df_graph = pd.DataFrame(graph_data).set_index("Entreprise")
+                    st.bar_chart(df_graph)
 
-    # --- CONTENU DU TAB 7 : GRAPHIQUE EN CHANDELIERS ---
         with tab7:
             st.title(f"📈 Graphique Historique : {company_name}")
             st.write(f"Analyse technique visuelle pour **{ticker}**.")
 
-            # 1. Sélection de la période par l'utilisateur
             periode_choisie = st.selectbox(
                 "Période du graphique :",
                 options=["1 mois", "3 mois", "6 mois", "1 an", "2 ans", "5 ans"],
-                index=3,  # "1 an" par défaut
+                index=3, 
                 key="graph_period_selector"
             )
 
-            # Correspondance pour Yahoo Finance
             mapping_periodes = {
                 "1 mois": "1mo",
                 "3 mois": "3mo",
@@ -713,13 +709,9 @@ if ticker:
             yf_period = mapping_periodes[periode_choisie]
 
             try:
-                # 2. Récupération des données historiques via l'objet 'action' existant
                 df_history = action.history(period=yf_period)
 
                 if not df_history.empty:
-                    import plotly.graph_objects as go
-
-                    # 3. Création du graphique en chandeliers (Syntaxe Plotly corrigée)
                     fig = go.Figure(data=[go.Candlestick(
                         x=df_history.index,
                         open=df_history['Open'],
@@ -727,111 +719,108 @@ if ticker:
                         low=df_history['Low'],
                         close=df_history['Close'],
                         name=ticker,
-                        increasing=dict(line_color='#26a69a', fillcolor='#26a69a'), # Vert émeraude
-                        decreasing=dict(line_color='#ef5350', fillcolor='#ef5350')  # Rouge boursier
+                        increasing=dict(line_color='#26a69a', fillcolor='#26a69a'),
+                        decreasing=dict(line_color='#ef5350', fillcolor='#ef5350')
                     )])
 
-                    # 4. Design et personnalisation du Layout
                     fig.update_layout(
                         margin=dict(l=10, r=10, t=10, b=10),
-                        height=500, # Un peu plus grand vu qu'il est seul dans l'onglet
-                        paper_bgcolor='#fffdf4',  # Fond de ton application
-                        plot_bgcolor='white',     # Fond du graphique
-                        xaxis_rangeslider_visible=True,  # Curseur de zoom en bas
+                        height=500,
+                        paper_bgcolor='#fffdf4',
+                        plot_bgcolor='white',
+                        xaxis_rangeslider_visible=True,
                         xaxis=dict(
                             gridcolor='#f0f0f0',
                             tickfont=dict(color='black')
                         ),
                         yaxis=dict(
                             gridcolor='#f0f0f0',
-                            side="right",  # Prix à droite style TradingView
+                            side="right",
                             tickfont=dict(color='black')
                         ),
-                        hovermode="x unified"  # Tooltip vertical complet au survol
+                        hovermode="x unified"
                     )
 
-                    # 5. Affichage dans Streamlit
                     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
                 else:
                     st.warning("Aucune donnée historique trouvée pour cette période.")
             except Exception as e:
                 st.error(f"Erreur lors de la génération du graphique : {e}")
 
-    # --- NOUVEL ONGLET : MARCHÉS POPULAIRES ---
-with tab8:
-    st.title("🌍 Marchés & Indices Populaires")
+        # --- NOUVEL ONGLET INTÉGRÉ : MARCHÉS POPULAIRES ---
+        with tab8:
+            st.title("🌍 Marchés & Indices Populaires")
 
-    # 📌 Liste des tickers à afficher (avec noms affichés)
-    popular_markets = {
-        "📈 **Indices**": {
-            "CAC 40": "^FCHI",
-            "Nasdaq": "^IXIC",
-            "S&P 500": "^GSPC",
-            "Dow Jones": "^DJI",
-            "Euro Stoxx 50": "^STOXX50E"
-        },
-        "🛢️ **Matières Premières**": {
-            "Or (Once)": "GC=F",
-            "Pétrole Brent": "BZ=F",
-            "Pétrole WTI": "CL=F",
-            "Cuivre": "HG=F",
-            "Argent": "SI=F"
-        },
-        "💵 **Obligations**": {
-            "OAT 2 ans": "FR2YT=RR",
-            "OAT 10 ans": "FR10YT=RR",
-            "US 2y": "^TNX",
-            "US 10y": "^TYX",
-            "Spread OAT-Bund": "BUND=F,FR10YT=RR"  # À calculer manuellement
-        },
-        "💱 **Devises**": {
-            "EUR/USD": "EURUSD=X",
-            "USD/JPY": "USDJPY=X",
-            "GBP/USD": "GBPUSD=X",
-            "USD/CHF": "USDCHF=X",
-            "AUD/USD": "AUDUSD=X"
-        }
-    }
-
-    # 🔄 Fonction pour récupérer et afficher les données
-    @st.cache_data(ttl=300)  # Cache 5 min
-    def get_market_data(ticker):
-        try:
-            stock = yf.Ticker(ticker)
-            hist = stock.history(period="1d")
-            if not hist.empty:
-                last_price = hist['Close'].iloc[-1]
-                prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else last_price
-                change_pct = ((last_price - prev_close) / prev_close) * 100
-                return {
-                    "price": f"{last_price:.2f}",
-                    "change": f"{change_pct:+.2f}%",
-                    "color": "green" if change_pct >= 0 else "red"
+            # 📌 Liste des tickers à afficher (avec noms affichés)
+            popular_markets = {
+                "📈 **Indices**": {
+                    "CAC 40": "^FCHI",
+                    "Nasdaq": "^IXIC",
+                    "S&P 500": "^GSPC",
+                    "Dow Jones": "^DJI",
+                    "Euro Stoxx 50": "^STOXX50E"
+                },
+                "🛢️ **Matières Premières**": {
+                    "Or (Once)": "GC=F",
+                    "Pétrole Brent": "BZ=F",
+                    "Pétrole WTI": "CL=F",
+                    "Cuivre": "HG=F",
+                    "Argent": "SI=F"
+                },
+                "💵 **Obligations**": {
+                    "OAT 2 ans": "FR2YT=RR",
+                    "OAT 10 ans": "FR10YT=RR",
+                    "US 2y": "^TNX",
+                    "US 10y": "^TYX",
+                    "Spread OAT-Bund": "BUND=F,FR10YT=RR"  # À calculer manuellement
+                },
+                "💱 **Devises**": {
+                    "EUR/USD": "EURUSD=X",
+                    "USD/JPY": "USDJPY=X",
+                    "GBP/USD": "GBPUSD=X",
+                    "USD/CHF": "USDCHF=X",
+                    "AUD/USD": "AUDUSD=X"
                 }
-        except:
-            return None
+            }
 
-    # 🎨 Affichage par catégorie
-    for category, tickers in popular_markets.items():
-        st.subheader(category)
-        cols = st.columns(3)  # 3 colonnes pour afficher plus d'infos
+            # 🔄 Fonction pour récupérer et afficher les données
+            @st.cache_data(ttl=300)  # Cache 5 min
+            def get_market_data(ticker_market):
+                try:
+                    stock_market = yf.Ticker(ticker_market)
+                    hist_market = stock_market.history(period="1d")
+                    if not hist_market.empty:
+                        last_price = hist_market['Close'].iloc[-1]
+                        prev_close = hist_market['Close'].iloc[-2] if len(hist_market) > 1 else last_price
+                        change_pct = ((last_price - prev_close) / prev_close) * 100
+                        return {
+                            "price": f"{last_price:.2f}",
+                            "change": f"{change_pct:+.2f}%",
+                            "color": "green" if change_pct >= 0 else "red"
+                        }
+                except:
+                    return None
 
-        for idx, (name, ticker) in enumerate(tickers.items()):
-            with cols[idx % 3]:
-                data = get_market_data(ticker)
-                if data:
-                    st.markdown(f"""
-                    <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid {data['color']};">
-                        <strong>{name}</strong><br>
-                        <span style="font-size: 18px; font-weight: bold;">{data['price']}</span>
-                        <span style="color: {data['color']}; margin-left: 5px;">{data['change']}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.info(f"{name}: N/A")
+            # 🎨 Affichage par catégorie
+            for category, tickers_cat in popular_markets.items():
+                st.subheader(category)
+                cols = st.columns(3)  # 3 colonnes pour afficher plus d'infos
 
-        st.divider()  # Séparateur entre catégories
+                for idx, (name, ticker_item) in enumerate(tickers_cat.items()):
+                    with cols[idx % 3]:
+                        data = get_market_data(ticker_item)
+                        if data:
+                            st.markdown(f"""
+                            <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid {data['color']};">
+                                <strong>{name}</strong><br>
+                                <span style="font-size: 18px; font-weight: bold;">{data['price']}</span>
+                                <span style="color: {data['color']}; margin-left: 5px;">{data['change']}</span>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.info(f"{name}: N/A")
 
+                st.divider()  # Séparateur entre catégories
 
     except Exception as e:
-        st.error(f"Erreur avec {ticker} : {e}")
+        st.error(f"Erreur globale avec {ticker} : {e}")
