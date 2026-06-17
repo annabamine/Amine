@@ -53,21 +53,22 @@ if "ping" in st.query_params:
     st.stop()
 
 # 3. Fonctions optimisées (2 appels API MAX par ticker)
-@st.cache_data(ttl=86400)  # Cache 24h pour éviter les requêtes inutiles
+@st.cache_data(ttl=86400)
 def fetch_search_results(query):
     try:
         return yf.Search(query, max_results=5).quotes
     except:
         return []
 
-@st.cache_data(ttl=3600)  # Cache 1h pour les données financières
+@st.cache_data(ttl=3600)
 def get_ticker_data(ticker):
     try:
         t = yf.Ticker(ticker)
         info = t.info
         hist_ytd = t.history(period="ytd")
-        hist_full = t.history(period="5y")  # Pour le graphique
-        dividends = t.dividends.last(5) if not t.dividends.empty else None
+        hist_full = t.history(period="5y")
+        # ✅ CORRECTION : .tail() au lieu de .last() pour les Series
+        dividends = t.dividends.tail(5) if not t.dividends.empty else None
         return {"info": info, "hist_ytd": hist_ytd, "hist_full": hist_full, "dividends": dividends}
     except Exception as e:
         st.error(f"Erreur avec {ticker}: {e}")
@@ -148,7 +149,7 @@ if ticker:
             display_price, price_label = pre_market_price, "Prix Pre-Market"
             price_change = ((pre_market_price - prev_close) / prev_close) * 100
         else:
-            display_price, price_label, price_change = current_price, "Prix de clôture", 0
+            display_price, price_label, price_change = prix, "Prix de clôture", 0
     else:
         display_price, price_label, price_change = prix, "Prix actuel", day_change
 
@@ -262,11 +263,14 @@ if ticker:
         st.subheader("📅 Dates clés")
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.metric("Prochains Earnings", datetime.fromtimestamp(infos.get('earningsTimestamp', 0)).strftime('%d/%m/%Y') if infos.get('earningsTimestamp') else "N/A")
+            earn_date = infos.get('earningsTimestamp')
+            st.metric("Prochains Earnings", datetime.fromtimestamp(earn_date).strftime('%d/%m/%Y') if earn_date else "N/A")
         with c2:
-            st.metric("Détachement Div.", datetime.fromtimestamp(infos.get('exDividendDate', 0)).strftime('%d/%m/%Y') if infos.get('exDividendDate') else "N/A")
+            ex_div_date = infos.get('exDividendDate')
+            st.metric("Détachement Div.", datetime.fromtimestamp(ex_div_date).strftime('%d/%m/%Y') if ex_div_date else "N/A")
         with c3:
-            st.metric("Versement Div.", datetime.fromtimestamp(infos.get('dividendDate', 0)).strftime('%d/%m/%Y') if infos.get('dividendDate') else "N/A")
+            div_date = infos.get('dividendDate')
+            st.metric("Versement Div.", datetime.fromtimestamp(div_date).strftime('%d/%m/%Y') if div_date else "N/A")
         st.divider()
         st.subheader("💰 Derniers Dividendes")
         if dividends is not None and not dividends.empty:
@@ -289,7 +293,8 @@ if ticker:
             """, unsafe_allow_html=True)
         insider_pct = infos.get('heldPercentInsiders', 0)
         if insider_pct:
-            st.metric("👤 Insiders", f"{insider_pct * 100 if insider_pct < 1 else insider_pct:.2f}%")
+            display_pct = insider_pct * 100 if insider_pct < 1 else insider_pct
+            st.metric("👤 Insiders", f"{display_pct:.2f}%")
 
     with tab5:
         st.title(f"📰 Actualités : {company_name}")
@@ -360,9 +365,10 @@ if ticker:
     with tab7:
         st.title(f"📈 Graphique : {company_name}")
         period = st.selectbox("Période", ["1mo", "3mo", "6mo", "1y", "2y", "5y"], index=3)
+        period_mapping = {"1mo": "1M", "3mo": "3M", "6mo": "6M", "1y": "1Y", "2y": "2Y", "5y": "5Y"}
         try:
             # Utilise hist_full déjà chargé en cache
-            df = hist_full if period == "5y" else hist_full.last(f"{period}")
+            df = hist_full.last(period_mapping[period]) if period != "5y" else hist_full
             if not df.empty:
                 fig = go.Figure(data=[go.Candlestick(
                     x=df.index, open=df['Open'], high=df['High'],
