@@ -132,13 +132,15 @@ def fetch_search_results(query):
         
 search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "NVDA", key="main_search_query")
 
-# On ne déclenche la logique QUE si search_query n'est pas vide ET fait au moins 3 caractères
 if search_query and len(search_query) >= 3:
     try:
-        quotes = fetch_search_results(search_query)
+        # C'EST ICI : On ajoute .lower() pour harmoniser la recherche en minuscules
+        search_clean = search_query.lower()
+        
+        quotes = fetch_search_results(search_clean)
         if quotes:
             options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
-            selected = st.selectbox("Sélectionnez l'entreprise :", options, key=f"selectbox_{search_query}")
+            selected = st.selectbox("Sélectionnez l'entreprise :", options, key=f"selectbox_{search_clean}")
             ticker = selected.split(" - ")[0]
         else:
             st.warning(f"Aucun résultat pour '{search_query}'")
@@ -146,8 +148,6 @@ if search_query and len(search_query) >= 3:
     except:
         ticker = search_query.upper()
 else:
-    # Si on a moins de 3 lettres (par exemple si l'utilisateur efface sa recherche), 
-    # on peut soit mettre le ticker à None, soit ne rien faire pour éviter de casser l'affichage.
     ticker = None
     if search_query and len(search_query) < 3:
         st.info("💡 Veuillez taper au moins 3 caractères pour lancer la recherche.")
