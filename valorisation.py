@@ -129,61 +129,23 @@ def fetch_search_results(query):
         return search_results.quotes
     except:
         return []
+        
+search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "Nvidia", key="main_search_query")
 
-# ==============================================================================
-# 1. INITIALISATION DE LA RECHERCHE PAR DÉFAUT (NVIDIA) AU TOUT PREMIER DÉMARRAGE
-# ==============================================================================
-if 'last_search' not in st.session_state:
-    st.session_state.last_search = "Nvidia"
-    initial_text = "Nvidia"
+if search_query:
+    try:
+        quotes = fetch_search_results(search_query)
+        if quotes:
+            options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
+            selected = st.selectbox("Sélectionnez l'entreprise :", options)
+            ticker = selected.split(" - ")[0]
+        else:
+            st.warning(f"Aucun résultat pour '{search_query}'")
+            ticker = None
+    except:
+        ticker = search_query.upper()
 else:
-    initial_text = ""
-
-# ==============================================================================
-# 2. LE BLOC DE FORMULAIRE (BLOQUE LA FRAISSE EN DIRECT AU CLAVIER)
-# ==============================================================================
-with st.form(key="search_form"):
-    search_query_input = st.text_input(
-        "Rechercher une entreprise (Nom ou Ticker) :", 
-        value=initial_text,
-        help="Tapez votre recherche puis appuyez sur Entrée ou sur le bouton Valider."
-    )
-    submit_button = st.form_submit_button(label="🔍 Valider")
-
-# Si l'utilisateur valide une nouvelle saisie, on met à jour la mémoire globale
-if submit_button and search_query_input:
-    st.session_state.last_search = search_query_input
-
-# ==============================================================================
-# 3. EXÉCUTION DE LA RECHERCHE VIA L'API (RECONNAÎT LES MOTS ET LES TICKERS)
-# ==============================================================================
-if 'last_search' in st.session_state and st.session_state.last_search:
-    # On ne lance l'API que si la recherche a réellement changé, pour éviter de saturer
-    if 'current_api_search' not in st.session_state or st.session_state.current_api_search != st.session_state.last_search:
-        try:
-            quotes = fetch_search_results(st.session_state.last_search)
-            if quotes:
-                st.session_state.search_options = [f"{q['symbol']} - {q.get('longname', q.get('shortname', 'Sans nom'))}" for q in quotes]
-                st.session_state.current_api_search = st.session_state.last_search
-            else:
-                st.session_state.search_options = []
-                st.warning(f"Aucun résultat pour '{st.session_state.last_search}'")
-        except:
-            st.session_state.search_options = []
-
-# ==============================================================================
-# 4. AFFICHAGE DU MENU DÉROULANT ET EXTRACTION DU TICKER (STABLE ET PERSISTANT)
-# ==============================================================================
-if 'search_options' in st.session_state and st.session_state.search_options:
-    selected = st.selectbox("Sélectionnez l'entreprise :", st.session_state.search_options)
-    ticker = selected.split(" - ")[0]
-else:
-    # Option de secours si l'API n'a rien renvoyé mais qu'on a forcé un ticker brut
-    ticker = st.session_state.get('last_search', '').upper() if 'last_search' in st.session_state else None
-
-if 'last_search' not in st.session_state:
     ticker = None
-
 
 # Mémorise les données globales pendant 24 heure
 @st.cache_data(ttl=86400)
