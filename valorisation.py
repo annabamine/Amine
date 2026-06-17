@@ -519,63 +519,7 @@ if ticker:
                 st.write(f" {reco}")
 
 
-            st.title("📂 Rapports Financiers Officiels (SEC Filings)")
-            st.write(f"Accédez directement aux documents officiels déposés par **{company_name} ({ticker})**.")
-
-            try:
-                # 1. Récupérer les filings via la méthode de yfinance
-                filings = action.get_sec_filings()
-
-                if filings is not None and len(filings) > 0:
-                   # Filtrer pour 10-K et 10-Q uniquement
-                 sec_filings = filings[filings['Type'].isin(['10-K', '10-Q'])]
-
-        if not sec_filings.empty:
-            # Prendre le plus récent
-            latest_filing = sec_filings.iloc[0]
-            filing_type = latest_filing['Type']
-            filing_date = latest_filing['Date']
-            filing_url = latest_filing.get('Url', None)
-
-            # Conversion sécurisée en datetime pour éviter le crash du .strftime() si c'est un str
-            try:
-                dt_obj = pd.to_datetime(filing_date)
-                date_texte = f"publié le {dt_obj.strftime('%d/%m/%Y')}"
-            except:
-                date_texte = f"publié le {filing_date}"
-
-            st.success(f"✅ Dernier rapport **{filing_type}** trouvé ({date_texte}).")
-
-            # 2. Bouton pour ouvrir le rapport
-            if filing_url:
-                st.link_button(
-                    label=f"🚀 Ouvrir le {filing_type} sur SEC EDGAR",
-                    url=filing_url,
-                    use_container_width=True,
-                    help="Lien direct vers le document officiel."
-                )
-            else:
-                # Solution de secours : construction de l'URL
-                cik = infos.get('symbol') or ticker
-                sec_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/"
-                st.link_button(
-                    label=f"🔍 Voir les filings de {ticker} sur SEC EDGAR",
-                    url=sec_url,
-                    use_container_width=True,
-                    help="Recherchez manuellement le rapport sur le site de la SEC."
-                )
-        else:
-            st.info("💡 Aucun rapport 10-K ou 10-Q récent trouvé.")
-            st.link_button("🌐 Rechercher sur SEC EDGAR", f"https://www.sec.gov/edgar/browse/?CIK={ticker}")
-    else:
-        st.warning("⚠️ Aucune donnée SEC disponible pour cette entreprise (souvent le cas pour les actions hors USA).")
-        st.link_button("🌐 Visiter le site Relations Investisseurs", infos.get("website", "https://google.com"))
-
-except Exception as e:
-    st.error(f"⚠️ Impossible de récupérer les rapports : {str(e)}")
-    st.link_button("🔍 Rechercher manuellement sur SEC EDGAR", f"https://www.sec.gov/edgar/browse/?CIK={ticker}")
-    
-
+           
             st.subheader("💰 Derniers Versements")
             divs = action.dividends
             if not divs.empty:
