@@ -6,6 +6,8 @@ import base64
 import pandas as pd
 from datetime import datetime
 import plotly.graph_objects as go
+import urllib.request
+import re
 
 # 1. Toujours en premier
 st.set_page_config(page_title="Value Quest", layout="centered")
@@ -768,9 +770,40 @@ if ticker:
                     "AUD/USD": "AUDUSD=X"
                 }
             }
+            
+            # Fonction de secours pour scraper BoursoBank si Yahoo fait la gueule
+            def fetch_oat_from_boursorama(url_url):
+                try :
+                    req = urllib.request.Request(url_url, headers={'User-Agent': 'Mozilla/5.0'})
+                    html = urllib.request.urlopen(req).read().decode('utf-8')
+                    # Recherche de la valeur de la ligne principale du cours
+                    match = re.search(r'data-purify-html="([^"]+)"', html)
+                    if match:
+                        val = match.group(1).strip().replace(' ', '').replace(',', '.')
+                        return float(val)
+                    # Deuxième pattern de secours Bourso
+                    match_fallback = re.search(r'<span class="c-instrument c-instrument--last">([^<]+)</span>', html)
+                    if match_fallback:
+                        val = match_fallback.group(1).strip().replace(' ', '').replace(',', '.')
+                        return float(val)
+                except:
+                    pass
+                return None
+            
 
             @st.cache_data(ttl=300)  
             def get_market_data(ticker_market):
+                if "BOURSORAMA_OAT" in ticker_market:
+                    url = "https://www.boursorama.com/bourse/taux/cours/2xFR001400H6A7/" if "2Y" in ticker_market else "https://www.boursorama.com/bourse/taux/cours/2xFR001400NDK4/"
+                    price_oat = fetch_oat_from_boursorama(url)
+                         if price_oat:
+                            return {
+                                "price": f"{price_oat:.2f}%",
+                                "change": "--",  # Bourso varie peu en intraday pour les particuliers
+                                "color": "green"
+                            }                 
+                return None
+
                 try:
                     stock = yf.Ticker(ticker_market)
                     
@@ -781,24 +814,21 @@ if ticker:
                         last_price = hist['Close'].iloc[-1]
                         prev_close = hist['Close'].iloc[-2]
                         change_pct = ((last_price - prev_close) / prev_close) * 100
+
+                        # Ajout du symbole % automatique pour les rendements obligataires US (TNX / TYX)
+                        suffixe = "%" if ticker_market in ["^TNX", "^TYX"] else ""
+                
+                        # Pour les taux US, le cours est multiplié par 10 dans Yahoo (ex: 4.43 au lieu de 44.3)
+                        if ticker_market in ["^TNX", "^TYX"]:
+                           last_price = last_price / 10
+                           prev_close = prev_close / 10
+                           change_pct = ((last_price - prev_close) / prev_close) * 100
+                    
                         return {
                             "price": f"{last_price:.2f}",
                             "change": f"{change_pct:+.2f}%",
                             "color": "green" if change_pct >= 0 else "red"
                         }
-                    
-                    # Plan B pour les obligations européennes (OAT) qui ne répondent pas sur .history()
-                    else:
-                        info = stock.info
-                        last_price = info.get('regularMarketPrice') or info.get('previousClose') or info.get('navPrice')
-                        if last_price:
-                            prev_close = info.get('regularMarketPreviousClose') or last_price
-                            change_pct = ((last_price - prev_close) / prev_close) * 100 if prev_close != last_price else 0.0
-                            return {
-                                "price": f"{last_price:.2f}",
-                                "change": f"{change_pct:+.2f}%" if change_pct != 0 else "0.00%",
-                                "color": "green" if change_pct >= 0 else "red"
-                            }
                     return None
                 except:
                     return None
