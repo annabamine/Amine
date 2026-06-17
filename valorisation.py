@@ -221,7 +221,7 @@ if ticker:
         with col3:
             st.write(f"**ROE** : {infos.get('returnOnEquity', 0) * 100:.1f} %" if infos.get('returnOnEquity') else "**ROE** : N/A")
             st.write(f"**ROA** : {infos.get('returnOnAssets', 0) * 100:.1f} %" if infos.get('returnOnAssets') else "**ROA** : N/A")
-            st.write(f"**Dividend Yield** : {infos.get('dividendYield', 0):.2%}" if infos.get('dividendYield') else "**Dividend Yield** : N/A")
+            st.write(f"**Dividend Yield** : {infos.get('dividendYield', 0):.2f} %" if infos.get('dividendYield') else "**Dividend Yield** : N/A")
             st.write(f"**Price/Book** : {infos.get('priceToBook', 'N/A')}")
             total_debt = infos.get("totalDebt")
             if fcf and total_debt and fcf > 0:
@@ -359,7 +359,7 @@ if ticker:
                         "Market Cap": f"{i.get('marketCap', 0)/1e9:.2f} Mds" if i.get('marketCap') else "N/A",
                         "PER": i.get("trailingPE", "N/A"),
                         "Sector": i.get("sector", "N/A"),
-                        "Dividend Yield": f"{i.get('dividendYield', 0):.2%}" if i.get('dividendYield') else "N/A"
+                        "Dividend Yield": f"{i.get('dividendYield', 0):.2f} %" if i.get('dividendYield') else "N/A"
                     }
                 time.sleep(0.5)
             if comparison_data:
