@@ -67,7 +67,6 @@ def get_ticker_data(ticker):
         info = t.info
         hist_ytd = t.history(period="ytd")
         hist_full = t.history(period="5y")
-        # ✅ CORRECTION : .tail() au lieu de .last() pour les Series
         dividends = t.dividends.tail(5) if not t.dividends.empty else None
         return {"info": info, "hist_ytd": hist_ytd, "hist_full": hist_full, "dividends": dividends}
     except Exception as e:
@@ -175,7 +174,8 @@ if ticker:
     st.write(f"**Market Cap** : {market_cap / 1_000_000_000:,.2f} Mds {devise}" if market_cap else "**Market Cap** : N/A")
 
     def format_valeur(valeur, devise):
-        if valeur is None or valeur == "N/A": return "N/A"
+        if valeur is None or valeur == "N/A":
+            return "N/A"
         abs_val = abs(valeur)
         return f"{valeur / 1_000_000_000:,.2f} Mds {devise}" if abs_val >= 1_000_000_000 else f"{valeur / 1_000_000:,.2f} M {devise}"
 
@@ -207,7 +207,7 @@ if ticker:
         with col2:
             capex = infos.get("capitalExpenditure")
             if capex is None and ocf and fcf:
-                capex = ocf - fcf  # CAPEX = OCF - FCF
+                capex = ocf - fcf
             st.write(f"**CAPEX** : {format_valeur(abs(capex), devise) if capex else 'N/A'}")
             st.write(f"**Op Cash Flow** : {format_valeur(ocf, devise) if ocf else 'N/A'}")
             if ocf and ocf != 0 and capex is not None:
@@ -242,7 +242,10 @@ if ticker:
         st.write(f"**Prix cible dans {horizon} ans** : {prix_cible:.2f} {devise}")
         if isinstance(prix, (float, int)) and prix_cible > 0 and prix > 0:
             cagr_prix = ((prix_cible / prix) ** (1/horizon) - 1) * 100
-            st.success(f"**CAGR** : {cagr_prix:.1f} %") if cagr_prix >= 10 else st.error(f"**CAGR** : {cagr_prix:.1f} %")
+            if cagr_prix >= 10:
+                st.success(f"**CAGR** : {cagr_prix:.1f} %")
+            else:
+                st.error(f"**CAGR** : {cagr_prix:.1f} %")
 
     with tab3:
         st.title("💰 Prix d'entrée juste")
@@ -358,7 +361,7 @@ if ticker:
                         "Sector": i.get("sector", "N/A"),
                         "Dividend Yield": f"{i.get('dividendYield', 0):.2%}" if i.get('dividendYield') else "N/A"
                     }
-                time.sleep(0.5)  # Évite la rate limit
+                time.sleep(0.5)
             if comparison_data:
                 st.dataframe(pd.DataFrame(comparison_data).T, use_container_width=True)
 
@@ -367,7 +370,6 @@ if ticker:
         period = st.selectbox("Période", ["1mo", "3mo", "6mo", "1y", "2y", "5y"], index=3)
         period_mapping = {"1mo": "1M", "3mo": "3M", "6mo": "6M", "1y": "1Y", "2y": "2Y", "5y": "5Y"}
         try:
-            # Utilise hist_full déjà chargé en cache
             df = hist_full.last(period_mapping[period]) if period != "5y" else hist_full
             if not df.empty:
                 fig = go.Figure(data=[go.Candlestick(
@@ -388,12 +390,25 @@ if ticker:
     with tab8:
         st.title("🌍 Marchés Populaires")
         markets = {
-            "Indices": {"CAC 40": "^FCHI", "Nasdaq": "^IXIC", "S&P 500": "^GSPC", "Dow Jones": "^DJI"},
-            "Matières Premières": {"Or": "GC=F", "Pétrole Brent": "BZ=F", "Pétrole WTI": "CL=F"},
-            "Devises": {"EUR/USD": "EURUSD=X", "USD/JPY": "USDJPY=X", "GBP/USD": "GBPUSD=X"}
-            "💵 **Obligations US**": {  # <-- NOUVEAU BLOC (2 tickers uniquement)
-                 "US 2y": "^TNX",
-                 "US 10y": "^TYX"
+            "📈 **Indices**": {
+                "CAC 40": "^FCHI",
+                "Nasdaq": "^IXIC",
+                "S&P 500": "^GSPC",
+                "Dow Jones": "^DJI"
+            },
+            "🛢️ **Matières Premières**": {
+                "Or": "GC=F",
+                "Pétrole Brent": "BZ=F",
+                "Pétrole WTI": "CL=F"
+            },
+            "💱 **Devises**": {
+                "EUR/USD": "EURUSD=X",
+                "USD/JPY": "USDJPY=X",
+                "GBP/USD": "GBPUSD=X"
+            },
+            "💵 **Obligations US**": {  # <-- NOUVEAU BLOC INTÉGRÉ
+                "US 2y": "^TNX",
+                "US 10y": "^TYX"
             }
         }
         for category, items in markets.items():
