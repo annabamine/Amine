@@ -289,7 +289,7 @@ if ticker:
                return f"{valeur / 1_000_000:,.2f} M {devise}"  
             
         # --- LOGIQUE DES ONGLETS MODIFIÉE POUR INCLURE LE TAB 6 ---
-        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
             "📊 Ratios", 
             "💰 Rentabilité", 
             "📈 Prix juste", 
@@ -297,6 +297,7 @@ if ticker:
             "🧠 Actualités", 
             "⚖️ Comparateur",
             "📈 Graphique"
+            "🌍 Marchés Populaires"
 ])
         
         with tab1:
@@ -755,6 +756,82 @@ if ticker:
                     st.warning("Aucune donnée historique trouvée pour cette période.")
             except Exception as e:
                 st.error(f"Erreur lors de la génération du graphique : {e}")
+
+    # --- NOUVEL ONGLET : MARCHÉS POPULAIRES ---
+with tab8:
+    st.title("🌍 Marchés & Indices Populaires")
+
+    # 📌 Liste des tickers à afficher (avec noms affichés)
+    popular_markets = {
+        "📈 **Indices**": {
+            "CAC 40": "^FCHI",
+            "Nasdaq": "^IXIC",
+            "S&P 500": "^GSPC",
+            "Dow Jones": "^DJI",
+            "Euro Stoxx 50": "^STOXX50E"
+        },
+        "🛢️ **Matières Premières**": {
+            "Or (Once)": "GC=F",
+            "Pétrole Brent": "BZ=F",
+            "Pétrole WTI": "CL=F",
+            "Cuivre": "HG=F",
+            "Argent": "SI=F"
+        },
+        "💵 **Obligations**": {
+            "OAT 2 ans": "FR2YT=RR",
+            "OAT 10 ans": "FR10YT=RR",
+            "US 2y": "^TNX",
+            "US 10y": "^TYX",
+            "Spread OAT-Bund": "BUND=F,FR10YT=RR"  # À calculer manuellement
+        },
+        "💱 **Devises**": {
+            "EUR/USD": "EURUSD=X",
+            "USD/JPY": "USDJPY=X",
+            "GBP/USD": "GBPUSD=X",
+            "USD/CHF": "USDCHF=X",
+            "AUD/USD": "AUDUSD=X"
+        }
+    }
+
+    # 🔄 Fonction pour récupérer et afficher les données
+    @st.cache_data(ttl=300)  # Cache 5 min
+    def get_market_data(ticker):
+        try:
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period="1d")
+            if not hist.empty:
+                last_price = hist['Close'].iloc[-1]
+                prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else last_price
+                change_pct = ((last_price - prev_close) / prev_close) * 100
+                return {
+                    "price": f"{last_price:.2f}",
+                    "change": f"{change_pct:+.2f}%",
+                    "color": "green" if change_pct >= 0 else "red"
+                }
+        except:
+            return None
+
+    # 🎨 Affichage par catégorie
+    for category, tickers in popular_markets.items():
+        st.subheader(category)
+        cols = st.columns(3)  # 3 colonnes pour afficher plus d'infos
+
+        for idx, (name, ticker) in enumerate(tickers.items()):
+            with cols[idx % 3]:
+                data = get_market_data(ticker)
+                if data:
+                    st.markdown(f"""
+                    <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid {data['color']};">
+                        <strong>{name}</strong><br>
+                        <span style="font-size: 18px; font-weight: bold;">{data['price']}</span>
+                        <span style="color: {data['color']}; margin-left: 5px;">{data['change']}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.info(f"{name}: N/A")
+
+        st.divider()  # Séparateur entre catégories
+
 
     except Exception as e:
         st.error(f"Erreur avec {ticker} : {e}")
