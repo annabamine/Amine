@@ -147,14 +147,14 @@ if search_query:
 else:
     ticker = None
 
-# Mémorise les données globales pendant 1 heure
-@st.cache_data(ttl=3600)
+# Mémorise les données globales pendant 24 heure
+@st.cache_data(ttl=86400)
 def get_ticker_info(ticker_symbol):
     action = yf.Ticker(ticker_symbol)
     return action.info
 
-# Mémorise l'historique YTD pendant 1 heure
-@st.cache_data(ttl=3600)
+# Mémorise l'historique YTD pendant 24 heure
+@st.cache_data(ttl=86400)
 def get_ticker_ytd(ticker_symbol):
     action = yf.Ticker(ticker_symbol)
     return action.history(period="ytd")
