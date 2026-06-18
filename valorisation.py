@@ -353,11 +353,20 @@ if ticker:
                 data_t = get_ticker_data(t)
                 if data_t:
                     i = data_t["info"]
+                    market_cap = i.get("marketCap", 0)
+                    free_cash_flow = i.get("freeCashflow", 0)
+                    total_revenue = i.get("totalRevenue", 0)
                     comparison_data[t] = {
                         "Nom": i.get("longName", "N/A"),
                         "Prix": f"{i.get('currentPrice', 0):.2f} {i.get('currencySymbol', '')}",
                         "Market Cap": f"{i.get('marketCap', 0)/1e9:.2f} Mds" if i.get('marketCap') else "N/A",
+                        "Price/Sales": f"{market_cap/total_revenue:.2f}" if total_revenue and total_revenue > 0 else "N/A",
                         "PER": i.get("trailingPE", "N/A"),
+                        "PER (Forward)": i.get("forwardPE", "N/A"),
+                        "Price/FCF": f"{market_cap/free_cash_flow:.2f}" if free_cash_flow and free_cash_flow > 0 else "N/A",
+                        
+                        "PEG": i.get("pegRatio", "N/A"),
+                        "Price/Book": i.get("priceToBook", "N/A"),
                         "Sector": i.get("sector", "N/A"),
                         "Dividend Yield": f"{i.get('dividendYield', 0):.2f} %" if i.get('dividendYield') else "N/A"
                     }
