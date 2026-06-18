@@ -74,7 +74,7 @@ def get_ticker_data(ticker):
         return None
 
 # 4. Recherche principale
-search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "NVDA", key="main_search_query")
+search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "", key="main_search_query")
 ticker = None
 if search_query and len(search_query) >= 3:
     try:
