@@ -353,17 +353,17 @@ if ticker:
                 data_t = get_ticker_data(t)
                 if data_t:
                     i = data_t["info"]
-                    market_cap = i.get("marketCap", 0)
-                    free_cash_flow = i.get("freeCashflow", 0)
+                    market_cap_val = i.get("marketCap", 0)
+                    free_cash_flow_val = i.get("freeCashflow", 0)
                     total_revenue = i.get("totalRevenue", 0)
                     comparison_data[t] = {
                         "Nom": i.get("longName", "N/A"),
                         "Prix": f"{i.get('currentPrice', 0):.2f} {i.get('currencySymbol', '')}",
                         "Market Cap": f"{i.get('marketCap', 0)/1e9:.2f} Mds" if i.get('marketCap') else "N/A",
-                        "Price/Sales": f"{market_cap/total_revenue:.2f}" if total_revenue and total_revenue > 0 else "N/A",
+                        "Price/Sales": f"{market_cap_val/total_revenue:.2f}" if total_revenue and total_revenue > 0 else "N/A",
                         "PER": i.get("trailingPE", "N/A"),
                         "PER (Forward)": i.get("forwardPE", "N/A"),
-                        "Price/FCF": f"{market_cap/free_cash_flow:.2f}" if free_cash_flow and free_cash_flow > 0 else "N/A",
+                        "Price/FCF": f"{market_cap_val/free_cash_flow_val:.2f}" if free_cash_flow_val and free_cash_flow_val > 0 else "N/A",
                         
                         "PEG": i.get("pegRatio", "N/A"),
                         "Price/Book": i.get("priceToBook", "N/A"),
@@ -445,6 +445,11 @@ if ticker:
                     try:
                         market_data = yf.Ticker(symbol)
                         price = market_data.history(period="1d")['Close'].iloc[-1]
+                        
+                        # Sauvegarde de la valeur du US 10y dans le session_state pour le DCF
+                        if symbol == "^TYX":
+                            st.session_state["us10y_rate"] = price / 10.0
+
                         st.markdown(f"""
                         <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid #001f3f;">
                             <strong>{name}</strong><br><span style="font-size: 18px;">{price:.2f}</span>
@@ -457,22 +462,21 @@ if ticker:
     with tab9:
         st.title("🧮 Modèle de Valorisation DCF Optimization")
         
-        # 1. Extraction et nettoyage des données de base de l'API
-        fcf_api = infos.get("freeCashflow", 0.0)
-        beta_api = infos.get("beta", 1.0)
-        mcap_api = infos.get("marketCap", 1.0)
+        # 1. Alignement et récupération directe des variables des blocs précédents (ZÉRO APPEL API)
+        fcf_api = fcf if (fcf and fcf != "N/A") else 0.0
+        beta_api = 1.0  # Calé à 1.0 par défaut pour éviter les aberrations
+        mcap_api = market_cap if market_cap else 1.0
+        
+        # Extraction des dettes depuis le dictionnaire global déjà chargé
         total_debt_api = infos.get("totalDebt", 0.0)
         cash_api = infos.get("totalCash", 0.0)
         net_debt_api = total_debt_api - cash_api
-        shares_api = infos.get("sharesOutstanding", 1.0)
         
-        # Extraction dynamique du taux sans risque (US 10y à partir de ^TYX)
-        try:
-            us10y_ticker = yf.Ticker("^TYX")
-            # Yahoo finance renvoie le taux multiplié par 10 (ex: 42.5 pour 4.25%)
-            rf_api = us10y_ticker.history(period="1d")['Close'].iloc[-1]
-        except:
-            rf_api = 3.5  # Valeur de secours par défaut si l'API échoue
+        # Récupération et sécurisation stricte du nombre d'actions de l'onglet 1
+        shares_api = shares if (shares and shares > 0) else 1.0
+        
+        # Récupération dynamique du taux sans risque calculé dans l'onglet 8 (défaut à 3.5%)
+        rf_api = st.session_state.get("us10y_rate", 3.5)
         
         # Calcul du coût brut indicatif de la dette (Intérêts / Dette)
         interest_exp = infos.get("interestExpense", None)
