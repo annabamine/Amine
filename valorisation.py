@@ -52,7 +52,7 @@ if "ping" in st.query_params:
     st.write("Pong! App is alive.")
     st.stop()
 
-# 3. Fonctions optimisées (2 appels API MAX par ticker)
+# 3. Fonctions optimisées
 @st.cache_data(ttl=86400)
 def fetch_search_results(query):
     try:
@@ -364,7 +364,6 @@ if ticker:
                         "PER": i.get("trailingPE", "N/A"),
                         "PER (Forward)": i.get("forwardPE", "N/A"),
                         "Price/FCF": f"{market_cap_val/free_cash_flow_val:.2f}" if free_cash_flow_val and free_cash_flow_val > 0 else "N/A",
-                        
                         "PEG": i.get("pegRatio", "N/A"),
                         "Price/Book": i.get("priceToBook", "N/A"),
                         "Sector": i.get("sector", "N/A"),
@@ -378,34 +377,20 @@ if ticker:
         st.title(f"📈 Graphique : {company_name}")
         period = st.selectbox("Période", ["1mo", "3mo", "6mo", "1y", "2y", "5y"], index=3)
 
-        # Mapping des périodes en jours
         period_days = {
-            "1mo": 30,
-            "3mo": 90,
-            "6mo": 180,
-            "1y": 365,
-            "2y": 730,
-            "5y": 1825
+            "1mo": 30, "3mo": 90, "6mo": 180, "1y": 365, "2y": 730, "5y": 1825
         }
 
         try:
             df = hist_full.tail(period_days[period])
             if not df.empty:
                 fig = go.Figure(data=[go.Candlestick(
-                    x=df.index,
-                    open=df['Open'],
-                    high=df['High'],
-                    low=df['Low'],
-                    close=df['Close'],
-                    increasing_line_color='#26a69a',
-                    decreasing_line_color='#ef5350'
+                    x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'],
+                    increasing_line_color='#26a69a', decreasing_line_color='#ef5350'
                 )])
                 fig.update_layout(
-                    height=500,
-                    paper_bgcolor='#fffdf4',
-                    plot_bgcolor='white',
-                    xaxis_rangeslider_visible=True,
-                    hovermode="x unified"
+                    height=500, paper_bgcolor='#fffdf4', plot_bgcolor='white',
+                    xaxis_rangeslider_visible=True, hovermode="x unified"
                 )
                 st.plotly_chart(fig, use_container_width=True)
             else:
@@ -416,26 +401,10 @@ if ticker:
     with tab8:
         st.title("🌍 Marchés Populaires")
         markets = {
-            "📈 **Indices**": {
-                "CAC 40": "^FCHI",
-                "Nasdaq": "^IXIC",
-                "S&P 500": "^GSPC",
-                "Dow Jones": "^DJI"
-            },
-            "🛢️ **Matières Premières**": {
-                "Or": "GC=F",
-                "Pétrole Brent": "BZ=F",
-                "Pétrole WTI": "CL=F"
-            },
-            "💱 **Devises**": {
-                "EUR/USD": "EURUSD=X",
-                "USD/JPY": "USDJPY=X",
-                "GBP/USD": "GBPUSD=X"
-            },
-            "💵 **Obligations US**": {
-                "US 2y": "^TNX",
-                "US 10y": "^TYX"
-            }
+            "📈 **Indices**": {"CAC 40": "^FCHI", "Nasdaq": "^IXIC", "S&P 500": "^GSPC", "Dow Jones": "^DJI"},
+            "🛢️ **Matières Premières**": {"Or": "GC=F", "Pétrole Brent": "BZ=F", "Pétrole WTI": "CL=F"},
+            "💱 **Devises**": {"EUR/USD": "EURUSD=X", "USD/JPY": "USDJPY=X", "GBP/USD": "GBPUSD=X"},
+            "💵 **Obligations US**": {"US 2y": "^TNX", "US 10y": "^TYX"}
         }
         for category, items in markets.items():
             st.subheader(category)
@@ -463,39 +432,42 @@ if ticker:
     with tab9:
         st.title("🧮 Modèle de Valorisation DCF Optimization")
         
-        # MODIFICATION : Lecture directe depuis le dictionnaire d'API 'infos' qui est global et stable en mémoire
+        # 1. Extraction direct et stable depuis la source cache globale 'infos'
         fcf_api = infos.get("freeCashflow", 0.0)
         if fcf_api is None:
             fcf_api = 0.0
             
-        beta_api = 1.0  # Calé par défaut à 1.00
+        beta_api = 1.0  
         mcap_api = infos.get("marketCap", 1.0)
         
         total_debt_api = infos.get("totalDebt", 0.0)
         cash_api = infos.get("totalCash", 0.0)
         net_debt_api = total_debt_api - cash_api
         
-        # MODIFICATION : Clonage de la clé d'origine brute pour empêcher la réinitialisation à 1
         shares_api = infos.get("sharesOutstanding", 1.0)
         if not shares_api or shares_api == 0:
             shares_api = 1.0
         
-        # Récupération dynamique du US 10Y selon ton réglage actuel
         rf_api = st.session_state.get("us10y_rate", 40.0)
         
-        # Calcul indicatif du coût brut de la dette
         interest_exp = infos.get("interestExpense", None)
         if interest_exp and total_debt_api > 0:
             calculated_rd = abs(interest_exp) / total_debt_api * 100
         else:
             calculated_rd = 4.0
             
-        # Structure du Capital (%)
+        # Structure du Capital (%) - CORRIGÉ POUR TRÉSORERIE NETTE (CASH > DETTE)
         total_ev_api = mcap_api + net_debt_api
-        pct_equity_calc = (mcap_api / total_ev_api * 100) if total_ev_api > 0 else 100.0
-        pct_debt_calc = (net_debt_api / total_ev_api * 100) if total_ev_api > 0 else 0.0
-        pct_equity_calc = max(min(pct_equity_calc, 100.0), 0.0)
-        pct_debt_calc = max(min(pct_debt_calc, 100.0), 0.0)
+        if total_ev_api and total_ev_api != 0:
+            pct_equity_calc = (mcap_api / total_ev_api * 100)
+            pct_debt_calc = (net_debt_api / total_ev_api * 100)
+        else:
+            pct_equity_calc = 100.0
+            pct_debt_calc = 0.0
+            
+        # Ajustement des plages d'échantillonnage pour tolérer les structures asynchrones et le cash net
+        pct_equity_calc = max(min(pct_equity_calc, 200.0), 0.0)
+        pct_debt_calc = max(min(pct_debt_calc, 100.0), -100.0)
 
         st.subheader("1. Configuration des Inputs")
         
@@ -519,8 +491,9 @@ if ticker:
             beta_input = st.number_input("Bêta de l'entreprise", value=float(beta_api), step=0.05, format="%.2f", key="dcf_beta")
             
             st.markdown("**⚖️ Coût des Financements**")
-            pct_equity = st.number_input("Cible Capitaux Propres / EV (%)", value=float(pct_equity_calc), min_value=0.0, max_value=100.0, step=1.0, key="dcf_pct_eq")
-            pct_debt = st.number_input("Cible Dette Nette / EV (%)", value=float(pct_debt_calc), min_value=0.0, max_value=100.0, step=1.0, key="dcf_pct_d")
+            # Modification des limites acceptées par l'interface utilisateur Streamlit
+            pct_equity = st.number_input("Cible Capitaux Propres / EV (%)", value=float(pct_equity_calc), min_value=0.0, max_value=200.0, step=1.0, key="dcf_pct_eq")
+            pct_debt = st.number_input("Cible Dette Nette / EV (%)", value=float(pct_debt_calc), min_value=-100.0, max_value=100.0, step=1.0, key="dcf_pct_d")
             cost_of_debt = st.number_input("Coût brut de la dette (%)", value=float(calculated_rd), step=0.1, key="dcf_rd")
 
         if pct_equity + pct_debt != 100.0:
@@ -534,7 +507,7 @@ if ticker:
         kd_net = (cost_of_debt / 100.0) * (1.0 - (tax_rate / 100.0))
         wacc_calculated = (w_equity * ke) + (w_debt * kd_net)
 
-        # 3. Projection des Flux et Actualisation
+        # 3. Projection des Flux et Actualisation (CORRIGÉ : Application linéaire de la croissance)
         flux_projetes = []
         flux_actualises = []
         wacc_factor = 1.0 + wacc_calculated
