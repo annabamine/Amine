@@ -466,8 +466,15 @@ if ticker:
         net_debt_api = total_debt_api - cash_api
         shares_api = infos.get("sharesOutstanding", 1.0)
         
+        # Extraction dynamique du taux sans risque (US 10y à partir de ^TYX)
+        try:
+            us10y_ticker = yf.Ticker("^TYX")
+            # Yahoo finance renvoie le taux multiplié par 10 (ex: 42.5 pour 4.25%)
+            rf_api = us10y_ticker.history(period="1d")['Close'].iloc[-1] / 10.0
+        except:
+            rf_api = 3.5  # Valeur de secours par défaut si l'API échoue
+        
         # Calcul du coût brut indicatif de la dette (Intérêts / Dette)
-        # Par sécurité, si l'info n'est pas là ou si la dette est nulle, on prend un standard de 4%
         interest_exp = infos.get("interestExpense", None)
         if interest_exp and total_debt_api > 0:
             calculated_rd = abs(interest_exp) / total_debt_api * 100
@@ -478,7 +485,6 @@ if ticker:
         total_ev_api = mcap_api + net_debt_api
         pct_equity_calc = (mcap_api / total_ev_api * 100) if total_ev_api > 0 else 100.0
         pct_debt_calc = (net_debt_api / total_ev_api * 100) if total_ev_api > 0 else 0.0
-        # Forcer des bornes logiques pour la structure cible initiale
         pct_equity_calc = max(min(pct_equity_calc, 100.0), 0.0)
         pct_debt_calc = max(min(pct_debt_calc, 100.0), 0.0)
 
@@ -500,7 +506,7 @@ if ticker:
             st.markdown("**⚙️ Paramètres du WACC**")
             tax_rate = st.number_input("Taux d'impôt standard (%)", value=30.0, step=0.5, key="dcf_tax")
             mkt_premium = st.number_input("Prime de risque de marché globale (%)", value=6.0, step=0.1, key="dcf_premium")
-            rf_rate = st.number_input("Taux sans risque (Obligation d'État 10Y %)", value=3.0, step=0.1, key="dcf_rf")
+            rf_rate = st.number_input("Taux sans risque (Obligation d'État 10Y %)", value=float(rf_api), step=0.1, key="dcf_rf")
             beta_input = st.number_input("Bêta de l'entreprise", value=float(beta_api), step=0.05, format="%.2f", key="dcf_beta")
             
             st.markdown("**⚖️ Coût des Financements**")
@@ -508,7 +514,6 @@ if ticker:
             pct_debt = st.number_input("Cible Dette Nette / EV (%)", value=float(pct_debt_calc), min_value=0.0, max_value=100.0, step=1.0, key="dcf_pct_d")
             cost_of_debt = st.number_input("Coût brut de la dette (%)", value=float(calculated_rd), step=0.1, key="dcf_rd")
 
-        # Ajustement automatique pour s'assurer que la structure est cohérente
         if pct_equity + pct_debt != 100.0:
             st.warning("⚠️ Attention : La somme des structures capitaux propres + dette ne fait pas 100%. Le modèle réajustera la pondération au prorata.")
 
@@ -516,11 +521,8 @@ if ticker:
         w_equity = pct_equity / (pct_equity + pct_debt) if (pct_equity + pct_debt) > 0 else 1.0
         w_debt = pct_debt / (pct_equity + pct_debt) if (pct_equity + pct_debt) > 0 else 0.0
         
-        # MEDAF : Ke = Rf + Beta * Prime
         ke = (rf_rate / 100.0) + beta_input * (mkt_premium / 100.0)
-        # Kd net d'impôt
         kd_net = (cost_of_debt / 100.0) * (1.0 - (tax_rate / 100.0))
-        # Formule finale du WACC
         wacc_calculated = (w_equity * ke) + (w_debt * kd_net)
 
         # 3. Projection des Flux et Actualisation
@@ -571,10 +573,8 @@ if ticker:
             st.metric("💎 Valeur des Capitaux Propres", f"{valeur_equity_dcf / 1e9:,.2f} Mds {devise}")
             st.write(f"*Dette Nette Déduite : {dette_nette_input / 1e9:,.2f} Mds*")
 
-        # Affichage du cours théorique final vs cours actuel
         st.markdown("### Évaluation du Cours")
         
-        # Conteneur pour le verdict visuel
         if prix_theorique_action > prix:
             potentiel = ((prix_theorique_action / prix) - 1.0) * 100.0
             st.success(f"🎯 **Prix Théorique du DCF : {prix_theorique_action:.2f} {devise}** (Potentiel de {potentiel:+.1f} % vs cours actuel de {prix:.2f} {devise} : ✅ Sous-évalué)")
@@ -582,7 +582,6 @@ if ticker:
             potentiel = ((prix_theorique_action / prix) - 1.0) * 100.0
             st.error(f"🎯 **Prix Théorique du DCF : {prix_theorique_action:.2f} {devise}** (Potentiel de {potentiel:+.1f} % vs cours actuel de {prix:.2f} {devise} : ⚠️ Surévalué)")
 
-        # Tableau des projections des flux pour la transparence du modèle
         with st.expander("📊 Détail des flux de trésorerie projetés année par année"):
             annees_label = [f"Année {i}" for i in range(1, horizon_dcf + 1)]
             df_flux = pd.DataFrame({
