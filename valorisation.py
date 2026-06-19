@@ -446,13 +446,15 @@ if ticker:
                         market_data = yf.Ticker(symbol)
                         price = market_data.history(period="1d")['Close'].iloc[-1]
                         
-                        # Sauvegarde de la valeur du US 10y dans le session_state pour le DCF
+                        # Affichage propre à l'écran, stockage de la valeur brute complète
+                        display_text = f"{price:.2f}"
                         if symbol == "^TYX":
-                            st.session_state["us10y_rate"] = price / 10.0
+                            st.session_state["us10y_rate"] = float(price)
+                            display_text = f"{price / 10.0:.2f}"
 
                         st.markdown(f"""
                         <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid #001f3f;">
-                            <strong>{name}</strong><br><span style="font-size: 18px;">{price:.2f}</span>
+                            <strong>{name}</strong><br><span style="font-size: 18px;">{display_text}</span>
                         </div>
                         """, unsafe_allow_html=True)
                     except:
@@ -462,30 +464,29 @@ if ticker:
     with tab9:
         st.title("🧮 Modèle de Valorisation DCF Optimization")
         
-        # 1. Alignement et récupération directe des variables des blocs précédents (ZÉRO APPEL API)
+        # 1. Alignement et récupération directe des variables globales (ZÉRO APPEL API NESTÉ)
         fcf_api = fcf if (fcf and fcf != "N/A") else 0.0
-        beta_api = 1.0  # Calé à 1.0 par défaut pour éviter les aberrations
+        beta_api = 1.0  # Calé par défaut à 1.00 pour éviter les bugs de Yahoo, ajustable à la main
         mcap_api = market_cap if market_cap else 1.0
         
-        # Extraction des dettes depuis le dictionnaire global déjà chargé
         total_debt_api = infos.get("totalDebt", 0.0)
         cash_api = infos.get("totalCash", 0.0)
         net_debt_api = total_debt_api - cash_api
         
-        # Récupération et sécurisation stricte du nombre d'actions de l'onglet 1
+        # Clonage strict de la valeur affichée dans le Bloc 1 (résout le bug du 0 de Nvidia)
         shares_api = shares if (shares and shares > 0) else 1.0
         
-        # Récupération dynamique du taux sans risque calculé dans l'onglet 8 (défaut à 3.5%)
-        rf_api = st.session_state.get("us10y_rate", 3.5)
+        # Récupération dynamique du US 10Y de l'onglet 8 mis à l'échelle (ex: 49.0 / 10.0 = 4.9)
+        rf_api = st.session_state.get("us10y_rate", 40.0) / 10.0
         
-        # Calcul du coût brut indicatif de la dette (Intérêts / Dette)
+        # Calcul indicatif du coût brut de la dette
         interest_exp = infos.get("interestExpense", None)
         if interest_exp and total_debt_api > 0:
             calculated_rd = abs(interest_exp) / total_debt_api * 100
         else:
             calculated_rd = 4.0
             
-        # Calcul de la structure actuelle du Capital (%)
+        # Structure du Capital (%)
         total_ev_api = mcap_api + net_debt_api
         pct_equity_calc = (mcap_api / total_ev_api * 100) if total_ev_api > 0 else 100.0
         pct_debt_calc = (net_debt_api / total_ev_api * 100) if total_ev_api > 0 else 0.0
@@ -521,7 +522,7 @@ if ticker:
         if pct_equity + pct_debt != 100.0:
             st.warning("⚠️ Attention : La somme des structures capitaux propres + dette ne fait pas 100%. Le modèle réajustera la pondération au prorata.")
 
-        # 2. Moteur de calcul du WACC
+        # 2. Moteur de calcul du WACC (CMPC)
         w_equity = pct_equity / (pct_equity + pct_debt) if (pct_equity + pct_debt) > 0 else 1.0
         w_debt = pct_debt / (pct_equity + pct_debt) if (pct_equity + pct_debt) > 0 else 0.0
         
@@ -555,12 +556,12 @@ if ticker:
         valeur_terminale = fcf_terminal / (wacc_calculated - g_rate)
         valeur_terminale_act = valeur_terminale / (wacc_factor ** horizon_dcf)
 
-        # 5. Calcul de la valeur des capitaux propres (Equity Value)
+        # 5. Calcul de l'Equity Value (Valeur théorique de l'action)
         valeur_entreprise_dcf = somme_fcf_act + valeur_terminale_act
         valeur_equity_dcf = valeur_entreprise_dcf - dette_nette_input
         prix_theorique_action = valeur_equity_dcf / shares_input if shares_input > 0 else 0.0
 
-        # 6. Affichage Synthétique des résultats du DCF
+        # 6. Affichage Synthétique
         st.markdown("---")
         st.subheader("2. Résultats de la Valorisation")
 
