@@ -541,8 +541,7 @@ if ticker:
         
         current_fcf = fcf_base
         for yr in range(1, horizon_dcf + 1):
-            if yr > 1:
-                current_fcf = current_fcf * (1.0 + (cagr_dcf / 100.0))
+            current_fcf = current_fcf * (1.0 + (cagr_dcf / 100.0))
             flux_projetes.append(current_fcf)
             
             fcf_act = current_fcf / (wacc_factor ** yr)
