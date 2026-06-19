@@ -450,7 +450,7 @@ if ticker:
                         display_text = f"{price:.2f}"
                         if symbol == "^TYX":
                             st.session_state["us10y_rate"] = float(price)
-                            display_text = f"{price / 10.0:.2f}"
+                            display_text = f"{price:.2f}"
 
                         st.markdown(f"""
                         <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid #001f3f;">
@@ -477,7 +477,7 @@ if ticker:
         shares_api = shares if (shares and shares > 0) else 1.0
         
         # Récupération dynamique du US 10Y de l'onglet 8 mis à l'échelle (ex: 49.0 / 10.0 = 4.9)
-        rf_api = st.session_state.get("us10y_rate", 40.0) / 10.0
+        rf_api = st.session_state.get("us10y_rate", 40.0)
         
         # Calcul indicatif du coût brut de la dette
         interest_exp = infos.get("interestExpense", None)
