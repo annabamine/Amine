@@ -180,9 +180,9 @@ if ticker:
         return f"{valeur / 1_000_000_000:,.2f} Mds {devise}" if abs_val >= 1_000_000_000 else f"{valeur / 1_000_000:,.2f} M {devise}"
 
     # ONGLETS
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
         "📊 Ratios", "💰 Rentabilité", "📈 Prix juste", "📋 Earnings",
-        "🧠 Actualités", "⚖️ Comparateur", "📈 Graphique", "🌍 Marchés Populaires"
+        "🧠 Actualités", "⚖️ Comparateur", "📈 Graphique", "🌍 Marchés Populaires", "🧮 Modèle DCF"
     ])
 
     with tab1:
@@ -453,3 +453,141 @@ if ticker:
                     except:
                         st.info(f"{name}: N/A")
             st.divider()
+
+    with tab9:
+        st.title("🧮 Modèle de Valorisation DCF Optimization")
+        
+        # 1. Extraction et nettoyage des données de base de l'API
+        fcf_api = infos.get("freeCashflow", 0.0)
+        beta_api = infos.get("beta", 1.0)
+        mcap_api = infos.get("marketCap", 1.0)
+        total_debt_api = infos.get("totalDebt", 0.0)
+        cash_api = infos.get("totalCash", 0.0)
+        net_debt_api = total_debt_api - cash_api
+        shares_api = infos.get("sharesOutstanding", 1.0)
+        
+        # Calcul du coût brut indicatif de la dette (Intérêts / Dette)
+        # Par sécurité, si l'info n'est pas là ou si la dette est nulle, on prend un standard de 4%
+        interest_exp = infos.get("interestExpense", None)
+        if interest_exp and total_debt_api > 0:
+            calculated_rd = abs(interest_exp) / total_debt_api * 100
+        else:
+            calculated_rd = 4.0
+            
+        # Calcul de la structure actuelle du Capital (%)
+        total_ev_api = mcap_api + net_debt_api
+        pct_equity_calc = (mcap_api / total_ev_api * 100) if total_ev_api > 0 else 100.0
+        pct_debt_calc = (net_debt_api / total_ev_api * 100) if total_ev_api > 0 else 0.0
+        # Forcer des bornes logiques pour la structure cible initiale
+        pct_equity_calc = max(min(pct_equity_calc, 100.0), 0.0)
+        pct_debt_calc = max(min(pct_debt_calc, 100.0), 0.0)
+
+        st.subheader("1. Configuration des Inputs")
+        
+        col_inp1, col_inp2 = st.columns(2)
+        with col_inp1:
+            st.markdown("**📊 Flux & Croissance**")
+            fcf_base = st.number_input(f"Free Cash Flow Année 1 ({devise})", value=float(fcf_api), format="%f", key="dcf_fcf_base")
+            cagr_dcf = st.number_input("Taux de croissance explicite (Années 1 à 5 en %)", value=8.0, step=0.5, key="dcf_cagr")
+            g_dcf = st.number_input("Taux de croissance à l'infini (g en %)", value=2.0, step=0.1, key="dcf_g")
+            horizon_dcf = st.number_input("Horizon explicite (années)", min_value=1, max_value=20, value=5, step=1, key="dcf_horizon")
+            
+            st.markdown("**🏢 Bilan & Structure**")
+            dette_nette_input = st.number_input(f"Dette Financière Nette ({devise})", value=float(net_debt_api), format="%f", key="dcf_net_debt")
+            shares_input = st.number_input("Actions en circulation", value=int(shares_api), format="%d", key="dcf_shares")
+
+        with col_inp2:
+            st.markdown("**⚙️ Paramètres du WACC**")
+            tax_rate = st.number_input("Taux d'impôt standard (%)", value=30.0, step=0.5, key="dcf_tax")
+            mkt_premium = st.number_input("Prime de risque de marché globale (%)", value=6.0, step=0.1, key="dcf_premium")
+            rf_rate = st.number_input("Taux sans risque (Obligation d'État 10Y %)", value=3.0, step=0.1, key="dcf_rf")
+            beta_input = st.number_input("Bêta de l'entreprise", value=float(beta_api), step=0.05, format="%.2f", key="dcf_beta")
+            
+            st.markdown("**⚖️ Coût des Financements**")
+            pct_equity = st.number_input("Cible Capitaux Propres / EV (%)", value=float(pct_equity_calc), min_value=0.0, max_value=100.0, step=1.0, key="dcf_pct_eq")
+            pct_debt = st.number_input("Cible Dette Nette / EV (%)", value=float(pct_debt_calc), min_value=0.0, max_value=100.0, step=1.0, key="dcf_pct_d")
+            cost_of_debt = st.number_input("Coût brut de la dette (%)", value=float(calculated_rd), step=0.1, key="dcf_rd")
+
+        # Ajustement automatique pour s'assurer que la structure est cohérente
+        if pct_equity + pct_debt != 100.0:
+            st.warning("⚠️ Attention : La somme des structures capitaux propres + dette ne fait pas 100%. Le modèle réajustera la pondération au prorata.")
+
+        # 2. Moteur de calcul du WACC
+        w_equity = pct_equity / (pct_equity + pct_debt) if (pct_equity + pct_debt) > 0 else 1.0
+        w_debt = pct_debt / (pct_equity + pct_debt) if (pct_equity + pct_debt) > 0 else 0.0
+        
+        # MEDAF : Ke = Rf + Beta * Prime
+        ke = (rf_rate / 100.0) + beta_input * (mkt_premium / 100.0)
+        # Kd net d'impôt
+        kd_net = (cost_of_debt / 100.0) * (1.0 - (tax_rate / 100.0))
+        # Formule finale du WACC
+        wacc_calculated = (w_equity * ke) + (w_debt * kd_net)
+
+        # 3. Projection des Flux et Actualisation
+        flux_projetes = []
+        flux_actualises = []
+        wacc_factor = 1.0 + wacc_calculated
+        
+        current_fcf = fcf_base
+        for yr in range(1, horizon_dcf + 1):
+            if yr > 1:
+                current_fcf = current_fcf * (1.0 + (cagr_dcf / 100.0))
+            flux_projetes.append(current_fcf)
+            
+            fcf_act = current_fcf / (wacc_factor ** yr)
+            flux_actualises.append(fcf_act)
+
+        somme_fcf_act = sum(flux_actualises)
+
+        # 4. Calcul de la Valeur Terminale (Gordon Shapiro)
+        g_rate = g_dcf / 100.0
+        if wacc_calculated <= g_rate:
+            st.error("❌ Erreur mathématique : Le WACC calculé doit être strictement supérieur au taux de croissance à l'infini (g). Ajustez vos paramètres.")
+            st.stop()
+            
+        fcf_terminal = flux_projetes[-1] * (1.0 + g_rate)
+        valeur_terminale = fcf_terminal / (wacc_calculated - g_rate)
+        valeur_terminale_act = valeur_terminale / (wacc_factor ** horizon_dcf)
+
+        # 5. Calcul de la valeur des capitaux propres (Equity Value)
+        valeur_entreprise_dcf = somme_fcf_act + valeur_terminale_act
+        valeur_equity_dcf = valeur_entreprise_dcf - dette_nette_input
+        prix_theorique_action = valeur_equity_dcf / shares_input if shares_input > 0 else 0.0
+
+        # 6. Affichage Synthétique des résultats du DCF
+        st.markdown("---")
+        st.subheader("2. Résultats de la Valorisation")
+
+        col_res1, col_res2, col_res3 = st.columns(3)
+        with col_res1:
+            st.metric("📈 WACC (CMPC) Calculé", f"{wacc_calculated * 100:.2f} %")
+            st.write(f"*Coût FP (Ke) : {ke*100:.2f} %*")
+            st.write(f"*Coût Dette Net (Kd) : {kd_net*100:.2f} %*")
+        with col_res2:
+            st.metric("🏢 Valeur d'Entreprise", f"{valeur_entreprise_dcf / 1e9:,.2f} Mds {devise}")
+            st.write(f"*Cumul FCF Explicites : {somme_fcf_act / 1e9:,.2f} Mds*")
+            st.write(f"*Valeur Terminale Act. : {valeur_terminale_act / 1e9:,.2f} Mds*")
+        with col_res3:
+            st.metric("💎 Valeur des Capitaux Propres", f"{valeur_equity_dcf / 1e9:,.2f} Mds {devise}")
+            st.write(f"*Dette Nette Déduite : {dette_nette_input / 1e9:,.2f} Mds*")
+
+        # Affichage du cours théorique final vs cours actuel
+        st.markdown("### Évaluation du Cours")
+        
+        # Conteneur pour le verdict visuel
+        if prix_theorique_action > prix:
+            potentiel = ((prix_theorique_action / prix) - 1.0) * 100.0
+            st.success(f"🎯 **Prix Théorique du DCF : {prix_theorique_action:.2f} {devise}** (Potentiel de {potentiel:+.1f} % vs cours actuel de {prix:.2f} {devise} : ✅ Sous-évalué)")
+        else:
+            potentiel = ((prix_theorique_action / prix) - 1.0) * 100.0
+            st.error(f"🎯 **Prix Théorique du DCF : {prix_theorique_action:.2f} {devise}** (Potentiel de {potentiel:+.1f} % vs cours actuel de {prix:.2f} {devise} : ⚠️ Surévalué)")
+
+        # Tableau des projections des flux pour la transparence du modèle
+        with st.expander("📊 Détail des flux de trésorerie projetés année par année"):
+            annees_label = [f"Année {i}" for i in range(1, horizon_dcf + 1)]
+            df_flux = pd.DataFrame({
+                "Flux de Trésorerie Projeté": [f"{f / 1e6:,.1f} M {devise}" for f in flux_projetes],
+                "Facteur d'Actualisation": [f"1 / {wacc_factor ** i:.3f}" for i in range(1, horizon_dcf + 1)],
+                "Flux Actualisé": [f"{f_act / 1e6:,.1f} M {devise}" for f_act in flux_actualises]
+            }, index=annees_label)
+            st.table(df_flux)
