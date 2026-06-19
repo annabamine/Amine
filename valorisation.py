@@ -470,7 +470,7 @@ if ticker:
         try:
             us10y_ticker = yf.Ticker("^TYX")
             # Yahoo finance renvoie le taux multiplié par 10 (ex: 42.5 pour 4.25%)
-            rf_api = us10y_ticker.history(period="1d")['Close'].iloc[-1] / 10.0
+            rf_api = us10y_ticker.history(period="1d")['Close'].iloc[-1]
         except:
             rf_api = 3.5  # Valeur de secours par défaut si l'API échoue
         
