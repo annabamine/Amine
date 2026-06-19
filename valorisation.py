@@ -446,7 +446,6 @@ if ticker:
                         market_data = yf.Ticker(symbol)
                         price = market_data.history(period="1d")['Close'].iloc[-1]
                         
-                        # Affichage propre à l'écran, stockage de la valeur brute complète
                         display_text = f"{price:.2f}"
                         if symbol == "^TYX":
                             st.session_state["us10y_rate"] = float(price)
@@ -464,19 +463,24 @@ if ticker:
     with tab9:
         st.title("🧮 Modèle de Valorisation DCF Optimization")
         
-        # 1. Alignement et récupération directe des variables globales (ZÉRO APPEL API NESTÉ)
-        fcf_api = fcf if (fcf and fcf != "N/A") else 0.0
-        beta_api = 1.0  # Calé par défaut à 1.00 pour éviter les bugs de Yahoo, ajustable à la main
-        mcap_api = market_cap if market_cap else 1.0
+        # MODIFICATION : Lecture directe depuis le dictionnaire d'API 'infos' qui est global et stable en mémoire
+        fcf_api = infos.get("freeCashflow", 0.0)
+        if fcf_api is None:
+            fcf_api = 0.0
+            
+        beta_api = 1.0  # Calé par défaut à 1.00
+        mcap_api = infos.get("marketCap", 1.0)
         
         total_debt_api = infos.get("totalDebt", 0.0)
         cash_api = infos.get("totalCash", 0.0)
         net_debt_api = total_debt_api - cash_api
         
-        # Clonage strict de la valeur affichée dans le Bloc 1 (résout le bug du 0 de Nvidia)
-        shares_api = shares if (shares and shares > 0) else 1.0
+        # MODIFICATION : Clonage de la clé d'origine brute pour empêcher la réinitialisation à 1
+        shares_api = infos.get("sharesOutstanding", 1.0)
+        if not shares_api or shares_api == 0:
+            shares_api = 1.0
         
-        # Récupération dynamique du US 10Y de l'onglet 8 mis à l'échelle (ex: 49.0 / 10.0 = 4.9)
+        # Récupération dynamique du US 10Y selon ton réglage actuel
         rf_api = st.session_state.get("us10y_rate", 40.0)
         
         # Calcul indicatif du coût brut de la dette
