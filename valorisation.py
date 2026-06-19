@@ -583,15 +583,6 @@ if ticker:
 
         st.markdown("### Évaluation du Cours")
 
-        st.markdown("---")
-        st.markdown("### 🔍 **DEBUG: Valeurs Réelles Utilisées dans le DCF**")
-        st.write(f"- **FCF base** : `{fcf_base:,.0f} {devise}` *(doit être ~46 335 873 024)*")
-        st.write(f"- **Dette nette** : `{dette_nette_input:,.0f} {devise}` *(doit être ~-40 357 998 592)*")
-        st.write(f"- **Actions** : `{shares_input:,.0f}` *(doit être ~2 422 100 000)*")
-        st.write(f"- **WACC** : `{wacc_calculated*100:.2f}%` *(doit être ~10,90%)*")
-        st.write(f"- **Valeur Equity** : `{valeur_equity_dcf:,.0f} {devise}`")
-        st.write(f"- **Prix brut (calcul)** : `{valeur_equity_dcf / shares_input:.2f} {devise}` *(doit être ~408,25)*")
-        
         if prix_theorique_action > prix:
             potentiel = ((prix_theorique_action / prix) - 1.0) * 100.0
             st.success(f"🎯 **Prix Théorique du DCF : {prix_theorique_action:.2f} {devise}** (Potentiel de {potentiel:+.1f} % vs cours actuel de {prix:.2f} {devise} : ✅ Sous-évalué)")
