@@ -487,7 +487,7 @@ if ticker:
 
         with col_inp2:
             st.markdown("**⚙️ Paramètres d'Actualisation (Coût du Capital Propre - Ke)**")
-            mkt_premium = st.number_input("Prime de risque de marché globale (%)", value=6.0, step=0.1, key="dcf_premium")
+            mkt_premium = st.number_input("Prime de risque de marché globale (%)", value=5.5, step=0.1, key="dcf_premium")
             rf_rate = st.number_input("Taux sans risque (Obligation d'État 10Y %)", value=float(rf_api), step=0.1, key="dcf_rf")
             beta_input = st.number_input("Bêta de l'entreprise", value=float(beta_api), step=0.05, format="%.2f", key="dcf_beta")
 
