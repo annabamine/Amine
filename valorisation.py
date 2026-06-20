@@ -468,9 +468,7 @@ if ticker:
         if eps_api is None or eps_api == 0:
             eps_api = 1.0
             
-        beta_api = infos.get("beta", 1.0)
-        if beta_api is None:
-            beta_api = 1.0
+        beta_api = 1.0
             
         # Récupération dynamique du US 10Y depuis les données macro (ou 4.0% par défaut)
         rf_api = st.session_state.get("us10y_rate", 4.0)
