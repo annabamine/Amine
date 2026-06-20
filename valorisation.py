@@ -179,10 +179,10 @@ if ticker:
         abs_val = abs(valeur)
         return f"{valeur / 1_000_000_000:,.2f} Mds {devise}" if abs_val >= 1_000_000_000 else f"{valeur / 1_000_000:,.2f} M {devise}"
 
-    # ONGLETS
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+    # ONGLETS (Note : L'onglet 9 a été retiré de la liste active des onglets)
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "📊 Ratios", "💰 Rentabilité", "📈 Prix juste", "📋 Earnings",
-        "🧠 Actualités", "⚖️ Comparateur", "📈 Graphique", "🌍 Marchés Populaires", "🧮 Modèle DCF"
+        "🧠 Actualités", "⚖️ Comparateur", "📈 Graphique", "🌍 Marchés Populaires"
     ])
 
     with tab1:
@@ -460,6 +460,10 @@ if ticker:
                         st.info(f"{name}: N/A")
             st.divider()
 
+    # =========================================================================
+    # BLOC 9 (MIS EN COMMENTAIRE POUR RÉUTILISATION FUTURE)
+    # =========================================================================
+    """
     with tab9:
         st.title("🧮 Modèle d'Actualisation des Bénéfices (EDM)")
         
@@ -468,7 +472,9 @@ if ticker:
         if eps_api is None or eps_api == 0:
             eps_api = 1.0
             
-        beta_api = 1.0
+        beta_api = infos.get("beta", 1.0)
+        if beta_api is None:
+            beta_api = 1.0
             
         # Récupération dynamique du US 10Y depuis les données macro (ou 4.0% par défaut)
         rf_api = st.session_state.get("us10y_rate", 4.0)
@@ -485,7 +491,7 @@ if ticker:
 
         with col_inp2:
             st.markdown("**⚙️ Paramètres d'Actualisation (Coût du Capital Propre - Ke)**")
-            mkt_premium = st.number_input("Prime de risque de marché globale (%)", value=5.5, step=0.1, key="dcf_premium")
+            mkt_premium = st.number_input("Prime de risque de marché globale (%)", value=6.0, step=0.1, key="dcf_premium")
             rf_rate = st.number_input("Taux sans risque (Obligation d'État 10Y %)", value=float(rf_api), step=0.1, key="dcf_rf")
             beta_input = st.number_input("Bêta de l'entreprise", value=float(beta_api), step=0.05, format="%.2f", key="dcf_beta")
 
@@ -552,3 +558,4 @@ if ticker:
                 "EPS Actualisé": [f"{e_act:.2f} {devise}" for e_act in eps_actualises]
             }, index=annees_label)
             st.table(df_flux)
+    """
