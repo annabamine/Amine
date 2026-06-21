@@ -7,6 +7,7 @@ import pandas as pd
 from datetime import datetime
 import plotly.graph_objects as go
 import time
+import requests
 
 # 1. Configuration de base
 st.set_page_config(page_title="Value Quest", layout="centered")
@@ -298,6 +299,51 @@ if ticker:
         if insider_pct:
             display_pct = insider_pct * 100 if insider_pct < 1 else insider_pct
             st.metric("👤 Insiders", f"{display_pct:.2f}%")
+
+
+        st.title(f"🎙️ Transcript du dernier Earning Call : {company_name}")
+    
+    st.title(f"🎙️ Transcript du dernier Earning Call : {company_name}")
+        
+        # Utilisation de ta clé d'API Financial Modeling Prep récupérée
+        API_KEY = "mmAvgD5gdlBcSLVP1tfPmvohVTFpyEQI"
+        
+        # Endpoint officiel FMP pour récupérer l'historique des transcripts (le premier [0] sera le plus récent)
+        url = f"https://financialmodelingprep.com/api/v3/earning_call_transcript/{ticker}?apikey={API_KEY}"
+        
+        import requests
+        try:
+            with st.spinner("Récupération du dernier transcript en cours..."):
+                response = requests.get(url)
+                data_transcript = response.json()
+            
+            if data_transcript and len(data_transcript) > 0:
+                dernier_call = data_transcript[0]  # Le trimestre disponible le plus récent
+                
+                st.subheader(f"📅 {dernier_call.get('title', 'Earning Call')}")
+                st.caption(f"Date officielle du call : {dernier_call.get('date')}")
+                
+                content = dernier_call.get("content", "")
+                
+                if content:
+                    st.markdown("### 📋 Résumé / Introduction du Call")
+                    # Découpage pour extraire les ~15 premières lignes (discours d'ouverture de l'opérateur ou du CEO)
+                    lignes = content.split("\n")
+                    intro_text = "\n".join(lignes[:15])
+                    st.info(intro_text + "\n\n[...] See full transcript below.")
+                    
+                    st.divider()
+                    
+                    # Conteneur scrollable pour le transcript intégral sans surcharger la page
+                    with st.expander("📖 Afficher le Transcript Intégral (Anglais)"):
+                        st.text(content)
+                else:
+                    st.warning("Le contenu du transcript est vide pour ce trimestre.")
+            else:
+                st.info("Aucun transcript trouvé pour ce ticker. Notez que le plan gratuit de FMP couvre principalement les grosses capitalisations américaines.")
+                
+        except Exception as e:
+            st.error(f"Erreur lors de la connexion à l'API Financial Modeling Prep : {e}")
 
     with tab5:
         st.title(f"📰 Actualités : {company_name}")
