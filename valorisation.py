@@ -300,40 +300,39 @@ if ticker:
             display_pct = insider_pct * 100 if insider_pct < 1 else insider_pct
             st.metric("👤 Insiders", f"{display_pct:.2f}%")
 
-         st.title(f"📢 Communiqués & Earnings : {company_name}")
-    
-    # URL de flux RSS spécialisé dans les annonces de résultats et communiqués officiels
-    # On utilise le flux SEC / PR de Yahoo ou d'un agrégateur propre
-    url_earnings = f"https://finance.yahoo.com/rss/headline?s={ticker}" 
-    
-    try:
-        feed = feedparser.parse(url_earnings)
-        if feed.entries:
-            st.write("### 📄 Dernières publications officielles et rapports :")
-            mots_cles = ["earning", "results", "q1", "q2", "q3", "q4", "fiscal", "report", "bénéfices", "chiffre d'affaires"]
-            
-            count = 0
-            for entry in feed.entries:
-                # On filtre pour afficher en priorité ce qui ressemble à un communiqué financier
-                if any(mot in entry.title.lower() for mot in mots_cles):
-                    with st.container():
-                        st.markdown(f"#### {entry.title}")
-                        st.write(f"📅 Publié le : {entry.published if 'published' in entry else 'N/A'}")
-                        st.markdown(f'<a href="{entry.link}" target="_blank">🔗 Ouvrir le communiqué officiel</a>', unsafe_allow_html=True)
-                        st.divider()
-                        count += 1
-                if count >= 5: # On limite à 5 liens pertinents
-                    break
-            
-            if count == 0:
-                st.info("Aucun communiqué de résultat direct trouvé dans le flux récent. Voici les dernières dépêches générales :")
-                for entry in feed.entries[:3]:
-                    st.markdown(f"• [{entry.title}]({entry.link})")
-        else:
-            st.info("Aucun lien disponible pour ce ticker.")
-    except Exception as e:
-        st.error(f"Impossible de charger les communiqués : {e}")
-
+        st.title(f"📢 Communiqués & Earnings : {company_name}")
+        
+        # URL de flux RSS spécialisé dans les annonces de résultats et communiqués officiels
+        # On utilise le flux SEC / PR de Yahoo ou d'un agrégateur propre
+        url_earnings = f"https://finance.yahoo.com/rss/headline?s={ticker}" 
+        
+        try:
+            feed = feedparser.parse(url_earnings)
+            if feed.entries:
+                st.write("### 📄 Dernières publications officielles et rapports :")
+                mots_cles = ["earning", "results", "q1", "q2", "q3", "q4", "fiscal", "report", "bénéfices", "chiffre d'affaires"]
+                
+                count = 0
+                for entry in feed.entries:
+                    # On filtre pour afficher en priorité ce qui ressemble à un communiqué financier
+                    if any(mot in entry.title.lower() for mot in mots_cles):
+                        with st.container():
+                            st.markdown(f"#### {entry.title}")
+                            st.write(f"📅 Publié le : {entry.published if 'published' in entry else 'N/A'}")
+                            st.markdown(f'<a href="{entry.link}" target="_blank">🔗 Ouvrir le communiqué officiel</a>', unsafe_allow_html=True)
+                            st.divider()
+                            count += 1
+                    if count >= 5: # On limite à 5 liens pertinents
+                        break
+                
+                if count == 0:
+                    st.info("Aucun communiqué de résultat direct trouvé dans le flux récent. Voici les dernières dépêches générales :")
+                    for entry in feed.entries[:3]:
+                        st.markdown(f"• [{entry.title}]({entry.link})")
+            else:
+                st.info("Aucun lien disponible pour ce ticker.")
+        except Exception as e:
+            st.error(f"Impossible de charger les communiqués : {e}")
 
     with tab5:
         st.title(f"📰 Actualités : {company_name}")
