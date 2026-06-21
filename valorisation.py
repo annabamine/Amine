@@ -300,8 +300,6 @@ if ticker:
             display_pct = insider_pct * 100 if insider_pct < 1 else insider_pct
             st.metric("👤 Insiders", f"{display_pct:.2f}%")
 
-        st.title(f"📢 Communiqués & Earnings : {company_name}")
-        
         
     with tab5:
         st.title(f"📰 Actualités : {company_name}")
