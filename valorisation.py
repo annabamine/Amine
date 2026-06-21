@@ -300,10 +300,9 @@ if ticker:
             display_pct = insider_pct * 100 if insider_pct < 1 else insider_pct
             st.metric("👤 Insiders", f"{display_pct:.2f}%")
 
-
         st.title(f"🎙️ Transcript du dernier Earning Call : {company_name}")
     
-    st.title(f"🎙️ Transcript du dernier Earning Call : {company_name}")
+        st.title(f"🎙️ Transcript du dernier Earning Call : {company_name}")
         
         # Utilisation de ta clé d'API Financial Modeling Prep récupérée
         API_KEY = "mmAvgD5gdlBcSLVP1tfPmvohVTFpyEQI"
@@ -601,7 +600,7 @@ if ticker:
             df_flux = pd.DataFrame({
                 "EPS Projeté": [f"{e:.2f} {devise}" for e in eps_projetes],
                 "Facteur d'Actualisation": [f"1 / {ke_factor ** i:.3f}" for i in range(1, horizon_dcf + 1)],
-                "EPS Actualisé": [f"{e_act:.2f} {devise}" for e_act in eps_actualises]
+                "EPS Actualisé": [f"{e_act:.2f} {devise}" for e_act in academic_flux]
             }, index=annees_label)
             st.table(df_flux)
     """
