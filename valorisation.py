@@ -90,6 +90,66 @@ if search_query and len(search_query) >= 3:
 elif search_query and len(search_query) < 3:
     st.info("💡 Veuillez taper au moins 3 caractères pour lancer la recherche.")
 
+# --- 4.5. AFFICHAGE DE LA PAGE D'ACCUEIL (si aucun ticker n'est sélectionné) ---
+if not ticker:
+    st.markdown("### 🌍 **Marchés en temps réel**")
+    st.markdown("---")
+
+    markets = {
+        "📈 **Indices**": {
+            "CAC 40": "^FCHI",
+            "Nasdaq": "^IXIC",
+            "S&P 500": "^GSPC",
+            "Dow Jones": "^DJI"
+        },
+        "🛢️ **Matières Premières**": {
+            "Or": "GC=F",
+            "Pétrole Brent": "BZ=F",
+            "Pétrole WTI": "CL=F"
+        },
+        "💱 **Devises**": {
+            "EUR/USD": "EURUSD=X",
+            "USD/JPY": "USDJPY=X",
+            "GBP/USD": "GBPUSD=X"
+        },
+        "💵 **Obligations US**": {
+            "US 2y": "^TNX",
+            "US 10y": "^TYX"
+        }
+    }
+
+    for category, items in markets.items():
+        st.subheader(category)
+        cols = st.columns(len(items))
+        for idx, (name, symbol) in enumerate(items.items()):
+            with cols[idx]:
+                try:
+                    market_data = yf.Ticker(symbol)
+                    price = market_data.history(period="1d")['Close'].iloc[-1]
+                    display_text = f"{price:.2f}"
+                    if symbol == "^TYX":
+                        st.session_state["us10y_rate"] = float(price)
+                    st.markdown(f"""
+                    <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid #001f3f;">
+                        <strong>{name}</strong><br><span style="font-size: 18px;">{display_text}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                except:
+                    st.info(f"{name}: N/A")
+        st.divider()
+
+    st.markdown("### 📰 **Actualités Financières**")
+    try:
+        feed = feedparser.parse("https://finance.yahoo.com/rss/topfinance")
+        if feed.entries:
+            for entry in feed.entries[:5]:
+                with st.container():
+                    st.markdown(f"**{entry.title}**")
+                    st.markdown(f'<a href="{entry.link}" target="_blank">🔗 Lire l\'article</a>', unsafe_allow_html=True)
+                    st.divider()
+    except:
+        st.warning("Impossible de charger les actualités (vérifiez votre connexion).")
+
 # 5. Affichage des données si ticker valide
 if ticker:
     data = get_ticker_data(ticker)
@@ -299,7 +359,6 @@ if ticker:
             display_pct = insider_pct * 100 if insider_pct < 1 else insider_pct
             st.metric("👤 Insiders", f"{display_pct:.2f}%")
 
-        
     with tab5:
         st.title(f"📰 Actualités : {company_name}")
         try:
@@ -355,7 +414,7 @@ if ticker:
                 if data_t:
                     i = data_t["info"]
                     market_cap_val = i.get("marketCap", 0)
-                    free_cash_flow_val = i.get("freeCashflow", 0)
+                    free_cash_flow_val = i.get("freeCashFlow", 0)
                     total_revenue = i.get("totalRevenue", 0)
                     comparison_data[t] = {
                         "Nom": i.get("longName", "N/A"),
@@ -365,7 +424,7 @@ if ticker:
                         "PER": i.get("trailingPE", "N/A"),
                         "PER (Forward)": i.get("forwardPE", "N/A"),
                         "Price/FCF": f"{market_cap_val/free_cash_flow_val:.2f}" if free_cash_flow_val and free_cash_flow_val > 0 else "N/A",
-                        
+
                         "PEG": i.get("pegRatio", "N/A"),
                         "Price/Book": i.get("priceToBook", "N/A"),
                         "Sector": i.get("sector", "N/A"),
@@ -446,7 +505,7 @@ if ticker:
                     try:
                         market_data = yf.Ticker(symbol)
                         price = market_data.history(period="1d")['Close'].iloc[-1]
-                        
+
                         display_text = f"{price:.2f}"
                         if symbol == "^TYX":
                             st.session_state["us10y_rate"] = float(price)
@@ -461,4 +520,102 @@ if ticker:
                         st.info(f"{name}: N/A")
             st.divider()
 
-   
+    # =========================================================================
+    # BLOC 9 (MIS EN COMMENTAIRE POUR RÉUTILISATION FUTURE)
+    # =========================================================================
+    """
+    with tab9:
+        st.title("🧮 Modèle d'Actualisation des Bénéfices (EDM)")
+
+        # Récupération de l'EPS (bénéfice par action) à la place du FCF global
+        eps_api = infos.get("trailingEps", 1.0)
+        if eps_api is None or eps_api == 0:
+            eps_api = 1.0
+
+        beta_api = infos.get("beta", 1.0)
+        if beta_api is None:
+            beta_api = 1.0
+
+        # Récupération dynamique du US 10Y depuis les données macro (ou 4.0% par défaut)
+        rf_api = st.session_state.get("us10y_rate", 4.0)
+
+        st.subheader("1. Configuration des Inputs")
+
+        col_inp1, col_inp2 = st.columns(2)
+        with col_inp1:
+            st.markdown("**📊 Bénéfices & Croissance**")
+            eps_base = st.number_input(f"Bénéfice Par Action de Base (EPS TTM en {devise})", value=float(eps_api), format="%f", key="dcf_eps_base")
+            cagr_dcf = st.number_input("Taux de croissance explicite (Années 1 à horizon en %)", value=8.0, step=0.5, key="dcf_cagr")
+            g_dcf = st.number_input("Taux de croissance à l'infini (g en %)", value=2.0, step=0.1, key="dcf_g")
+            horizon_dcf = st.number_input("Horizon explicite (années)", min_value=1, max_value=20, value=5, step=1, key="dcf_horizon")
+
+        with col_inp2:
+            st.markdown("**⚙️ Paramètres d'Actualisation (Coût du Capital Propre - Ke)**")
+            mkt_premium = st.number_input("Prime de risque de marché globale (%)", value=6.0, step=0.1, key="dcf_premium")
+            rf_rate = st.number_input("Taux sans risque (Obligation d'État 10Y %)", value=float(rf_api), step=0.1, key="dcf_rf")
+            beta_input = st.number_input("Bêta de l'entreprise", value=float(beta_api), step=0.05, format="%.2f", key="dcf_beta")
+
+        # Calcul du Coût des Capitaux Propres (CAPM / Ke)
+        ke = (rf_rate / 100.0) + beta_input * (mkt_premium / 100.0)
+        ke_factor = 1.0 + ke
+
+        # 3. Projection de l'EPS et Actualisation par action
+        eps_projetes = []
+        eps_actualises = []
+
+        current_eps = eps_base
+        for yr in range(1, horizon_dcf + 1):
+            current_eps = current_eps * (1.0 + (cagr_dcf / 100.0))
+            eps_projetes.append(current_eps)
+
+            eps_act = current_eps / (ke_factor ** yr)
+            eps_actualises.append(eps_act)
+
+        somme_eps_act = sum(eps_actualises)
+
+        # 4. Calcul de la Valeur Terminale de l'EPS (Gordon Shapiro appliqué à l'action)
+        g_rate = g_dcf / 100.0
+        if ke <= g_rate:
+            st.error("❌ Erreur mathématique : Le coût des capitaux propres (Ke) doit être strictement supérieur au taux de croissance à l'infini (g). Ajustez vos paramètres.")
+            st.stop()
+
+        eps_terminal = eps_projetes[-1] * (1.0 + g_rate)
+        valeur_terminale_eps = eps_terminal / (ke - g_rate)
+        valeur_terminale_eps_act = valeur_terminale_eps / (ke_factor ** horizon_dcf)
+
+        # 5. Objectif de cours direct (Pas besoin de retraiter la dette ou de diviser par le nombre d'actions)
+        prix_theorique_action = somme_eps_act + valeur_terminale_eps_act
+
+        # 6. Affichage Synthétique
+        st.markdown("---")
+        st.subheader("2. Résultats de la Valorisation")
+
+        col_res1, col_res2, col_res3 = st.columns(3)
+        with col_res1:
+            st.metric("📈 Coût des Capitaux Propres (Ke)", f"{ke * 100:.2f} %")
+            st.write(f"*Prime de risque : {beta_input * mkt_premium:.2f} %*")
+        with col_res2:
+            st.metric("📊 Valeur Actuelle des EPS", f"{somme_eps_act:.2f} {devise}")
+            st.write(f"*Cumul de la période de croissance*")
+        with col_res3:
+            st.metric("💎 Valeur Terminale Actualisée", f"{valeur_terminale_eps_act:.2f} {devise}")
+            st.write(f"*Bénéfice projeté à l'infini*")
+
+        st.markdown("### Évaluation du Cours")
+
+        if prix_theorique_action > prix:
+            potentiel = ((prix_theorique_action / prix) - 1.0) * 100.0
+            st.success(f"🎯 **Prix Théorique de l'Action : {prix_theorique_action:.2f} {devise}** (Potentiel de {potentiel:+.1f} % vs cours actuel de {prix:.2f} {devise} : ✅ Sous-évalué)")
+        else:
+            potentiel = ((prix_theorique_action / prix) - 1.0) * 100.0
+            st.error(f"🎯 **Prix Théorique de l'Action : {prix_theorique_action:.2f} {devise}** (Potentiel de {potentiel:+.1f} % vs cours actuel de {prix:.2f} {devise} : ⚠️ Surévalué)")
+
+        with st.expander("📊 Détail des bénéfices par action (EPS) projetés"):
+            annees_label = [f"Année {i}" for i in range(1, horizon_dcf + 1)]
+            df_flux = pd.DataFrame({
+                "EPS Projeté": [f"{e:.2f} {devise}" for e in eps_projetes],
+                "Facteur d'Actualisation": [f"1 / {ke_factor ** i:.3f}" for i in range(1, horizon_dcf + 1)],
+                "EPS Actualisé": [f"{e_act:.2f} {devise}" for e_act in eps_actualises]
+            }, index=annees_label)
+            st.table(df_flux)
+    """
