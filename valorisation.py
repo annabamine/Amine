@@ -111,7 +111,7 @@ if not ticker:
         "US 10y": "^TYX"
     }
 
-    @st.cache_data(ttl=900)  # Cache 15 min
+    @st.cache_data(ttl=7200)  # Cache 15 min
     def get_market_prices(symbols_dict):
         prices = {}
         for name, symbol in symbols_dict.items():
