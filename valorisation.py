@@ -90,23 +90,43 @@ if search_query and len(search_query) >= 3:
 elif search_query and len(search_query) < 3:
     st.info("💡 Veuillez taper au moins 3 caractères pour lancer la recherche.")
 
-# --- 4.5. AFFICHAGE DE LA PAGE D'ACCUEIL (optimisé : 1 appel API groupé + cache) ---
+# --- 4.5. AFFICHAGE DE LA PAGE D'ACCUEIL (version corrigée et optimisée) ---
 if not ticker:
     st.markdown("### 🌍 **Marchés en temps réel**")
     st.markdown("---")
 
     # Liste des symboles à récupérer
-    symbols = ["^FCHI", "^GSPC", "^IXIC", "^DJI", "GC=F", "BZ=F", "CL=F", "EURUSD=X", "USDJPY=X", "GBPUSD=X", "^TNX", "^TYX"]
+    symbols = {
+        "CAC 40": "^FCHI",
+        "S&P 500": "^GSPC",
+        "Nasdaq": "^IXIC",
+        "Dow Jones": "^DJI",
+        "Or": "GC=F",
+        "Pétrole Brent": "BZ=F",
+        "Pétrole WTI": "CL=F",
+        "EUR/USD": "EURUSD=X",
+        "USD/JPY": "USDJPY=X",
+        "GBP/USD": "GBPUSD=X",
+        "US 2y": "^TNX",
+        "US 10y": "^TYX"
+    }
 
-    @st.cache_data(ttl=900)  # Cache valide 15 minutes
-    def get_all_market_prices(symbols_list):
-        data = yf.download(symbols_list, period="1d", group_by="ticker", progress=False)
-        return {
-            symbol: data[symbol]['Close'].iloc[-1] if symbol in data and not data[symbol].empty else None
-            for symbol in symbols_list
-        }
+    @st.cache_data(ttl=900)  # Cache 15 min
+    def get_market_prices(symbols_dict):
+        prices = {}
+        for name, symbol in symbols_dict.items():
+            try:
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period="1d")
+                if not hist.empty:
+                    prices[symbol] = hist['Close'].iloc[-1]
+                else:
+                    prices[symbol] = None
+            except:
+                prices[symbol] = None
+        return prices
 
-    prices = get_all_market_prices(symbols)
+    prices = get_market_prices(symbols)
 
     markets = {
         "📈 **Indices**": {
