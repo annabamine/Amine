@@ -52,7 +52,10 @@ if "ping" in st.query_params:
     st.write("Pong! App is alive.")
     st.stop()
 
-# 3. Fonctions optimisées (2 appels API MAX par ticker)
+# ==========================================
+# FONCTIONS OPTIMISÉES ET CACHÉES
+# ==========================================
+
 @st.cache_data(ttl=86400)
 def fetch_search_results(query):
     try:
@@ -60,20 +63,46 @@ def fetch_search_results(query):
     except:
         return []
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=1800)  # Cache de 30 minutes pour éviter la saturation active
 def get_ticker_data(ticker):
     try:
         t = yf.Ticker(ticker)
         info = t.info
-        hist_ytd = t.history(period="ytd")
+        
+        # OPTIMISATION : 1 seul appel historique (5 ans). Le reste sera filtré en Python.
         hist_full = t.history(period="5y")
         dividends = t.dividends.tail(5) if not t.dividends.empty else None
-        return {"info": info, "hist_ytd": hist_ytd, "hist_full": hist_full, "dividends": dividends}
+        
+        return {"info": info, "hist_full": hist_full, "dividends": dividends}
     except Exception as e:
         st.error(f"Erreur avec {ticker}: {e}")
         return None
 
-# 4. Recherche principale
+@st.cache_data(ttl=900)  # Cache global de 15 min partagé pour les indices mondiaux
+def get_popular_markets_data():
+    markets = {
+        "📈 **Indices**": {"CAC 40": "^FCHI", "Nasdaq": "^IXIC", "S&P 500": "^GSPC", "Dow Jones": "^DJI"},
+        "🛢️ **Matières Premières**": {"Or": "GC=F", "Pétrole Brent": "BZ=F", "Pétrole WTI": "CL=F"},
+        "💱 **Devises**": {"EUR/USD": "EURUSD=X", "USD/JPY": "USDJPY=X", "GBP/USD": "GBPUSD=X"},
+        "💵 **Obligations US**": {"US 2y": "^TNX", "US 10y": "^TYX"}
+    }
+    
+    results = {}
+    for category, items in markets.items():
+        results[category] = {}
+        for name, symbol in items.items():
+            try:
+                # Utilisation de history(1d) plus léger que Ticker().info
+                tick = yf.Ticker(symbol)
+                price = tick.history(period="1d")['Close'].iloc[-1]
+                results[category][name] = float(price)
+            except:
+                results[category][name] = None
+    return results
+
+# ==========================================
+# RECHERCHE PRINCIPALE
+# ==========================================
 search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "", key="main_search_query")
 ticker = None
 if search_query and len(search_query) >= 3:
@@ -90,7 +119,7 @@ if search_query and len(search_query) >= 3:
 elif search_query and len(search_query) < 3:
     st.info("💡 Veuillez taper au moins 3 caractères pour lancer la recherche.")
 
-# 5. Affichage des données si ticker valide
+# Affichage des données si ticker valide
 if ticker:
     data = get_ticker_data(ticker)
     if not data:
@@ -98,9 +127,9 @@ if ticker:
         st.stop()
 
     infos = data["info"]
-    hist_ytd = data["hist_ytd"]
     hist_full = data["hist_full"]
     dividends = data["dividends"]
+    
     devise = infos.get("currencySymbol") or infos.get("currency") or ""
     prix = infos.get("currentPrice", 0)
     prev_close = infos.get("regularMarketPreviousClose")
@@ -108,13 +137,17 @@ if ticker:
     day_color = "green" if day_change >= 0 else "red"
     day_text = f"({day_change:+.2f}%)" if isinstance(day_change, (int, float)) else ""
 
-    # YTD Performance
+    # OPTIMISATION PYTHON : Calcul de la performance YTD directement sur l'historique existant
     ytd_text = "N/A YTD"
-    if not hist_ytd.empty and len(hist_ytd) > 0:
+    if not hist_full.empty:
         try:
-            price_jan_1st = hist_ytd['Close'].iloc[0]
-            ytd_change = ((prix - price_jan_1st) / price_jan_1st) * 100
-            ytd_text = f"{ytd_change:+.2f}% YTD"
+            current_year = datetime.now().year
+            # Filtrer les données de l'année en cours
+            df_ytd = hist_full[hist_full.index.year == current_year]
+            if not df_ytd.empty:
+                price_jan_1st = df_ytd['Close'].iloc[0]
+                ytd_change = ((prix - price_jan_1st) / price_jan_1st) * 100
+                ytd_text = f"{ytd_change:+.2f}% YTD"
         except:
             pass
 
@@ -179,7 +212,7 @@ if ticker:
         abs_val = abs(valeur)
         return f"{valeur / 1_000_000_000:,.2f} Mds {devise}" if abs_val >= 1_000_000_000 else f"{valeur / 1_000_000:,.2f} M {devise}"
 
-    # ONGLETS (Note : L'onglet 9 a été retiré de la liste active des onglets)
+    # ONGLETS
     tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "📊 Ratios", "💰 Rentabilité", "📈 Prix juste", "📋 Earnings",
         "🧠 Actualités", "⚖️ Comparateur", "📈 Graphique", "🌍 Marchés Populaires"
@@ -299,7 +332,6 @@ if ticker:
             display_pct = insider_pct * 100 if insider_pct < 1 else insider_pct
             st.metric("👤 Insiders", f"{display_pct:.2f}%")
 
-        
     with tab5:
         st.title(f"📰 Actualités : {company_name}")
         try:
@@ -365,13 +397,12 @@ if ticker:
                         "PER": i.get("trailingPE", "N/A"),
                         "PER (Forward)": i.get("forwardPE", "N/A"),
                         "Price/FCF": f"{market_cap_val/free_cash_flow_val:.2f}" if free_cash_flow_val and free_cash_flow_val > 0 else "N/A",
-                        
                         "PEG": i.get("pegRatio", "N/A"),
                         "Price/Book": i.get("priceToBook", "N/A"),
                         "Sector": i.get("sector", "N/A"),
                         "Dividend Yield": f"{i.get('dividendYield', 0):.2f} %" if i.get('dividendYield') else "N/A"
                     }
-                time.sleep(0.5)
+                time.sleep(0.1) # Réduit le sleep inutile
             if comparison_data:
                 st.dataframe(pd.DataFrame(comparison_data).T, use_container_width=True)
 
@@ -379,16 +410,9 @@ if ticker:
         st.title(f"📈 Graphique : {company_name}")
         period = st.selectbox("Période", ["1mo", "3mo", "6mo", "1y", "2y", "5y"], index=3)
 
-        # Mapping des périodes en jours
-        period_days = {
-            "1mo": 30,
-            "3mo": 90,
-            "6mo": 180,
-            "1y": 365,
-            "2y": 730,
-            "5y": 1825
-        }
+        period_days = {"1mo": 30, "3mo": 90, "6mo": 180, "1y": 365, "2y": 730, "5y": 1825}
 
+        # OPTIMISATION PYTHON : Utilisation de tail() sur la dataframe de 5 ans déjà en cache
         try:
             df = hist_full.tail(period_days[period])
             if not df.empty:
@@ -416,49 +440,25 @@ if ticker:
 
     with tab8:
         st.title("🌍 Marchés Populaires")
-        markets = {
-            "📈 **Indices**": {
-                "CAC 40": "^FCHI",
-                "Nasdaq": "^IXIC",
-                "S&P 500": "^GSPC",
-                "Dow Jones": "^DJI"
-            },
-            "🛢️ **Matières Premières**": {
-                "Or": "GC=F",
-                "Pétrole Brent": "BZ=F",
-                "Pétrole WTI": "CL=F"
-            },
-            "💱 **Devises**": {
-                "EUR/USD": "EURUSD=X",
-                "USD/JPY": "USDJPY=X",
-                "GBP/USD": "GBPUSD=X"
-            },
-            "💵 **Obligations US**": {
-                "US 2y": "^TNX",
-                "US 10y": "^TYX"
-            }
-        }
-        for category, items in markets.items():
+        
+        # OPTIMISATION : Appel unique de la fonction globale mis en cache
+        markets_data = get_popular_markets_data()
+        
+        for category, items in markets_data.items():
             st.subheader(category)
             cols = st.columns(len(items))
-            for idx, (name, symbol) in enumerate(items.items()):
+            for idx, (name, price) in enumerate(items.items()):
                 with cols[idx]:
-                    try:
-                        market_data = yf.Ticker(symbol)
-                        price = market_data.history(period="1d")['Close'].iloc[-1]
-                        
+                    if price is not None:
                         display_text = f"{price:.2f}"
-                        if symbol == "^TYX":
-                            st.session_state["us10y_rate"] = float(price)
-                            display_text = f"{price:.2f}"
+                        if name == "US 10y":
+                            st.session_state["us10y_rate"] = price
 
                         st.markdown(f"""
                         <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid #001f3f;">
                             <strong>{name}</strong><br><span style="font-size: 18px;">{display_text}</span>
                         </div>
                         """, unsafe_allow_html=True)
-                    except:
+                    else:
                         st.info(f"{name}: N/A")
             st.divider()
-
-   
