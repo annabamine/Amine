@@ -90,16 +90,29 @@ if search_query and len(search_query) >= 3:
 elif search_query and len(search_query) < 3:
     st.info("💡 Veuillez taper au moins 3 caractères pour lancer la recherche.")
 
-# --- 4.5. AFFICHAGE DE LA PAGE D'ACCUEIL (si aucun ticker n'est sélectionné) ---
+# --- 4.5. AFFICHAGE DE LA PAGE D'ACCUEIL (optimisé : 1 appel API groupé + cache) ---
 if not ticker:
     st.markdown("### 🌍 **Marchés en temps réel**")
     st.markdown("---")
 
+    # Liste des symboles à récupérer
+    symbols = ["^FCHI", "^GSPC", "^IXIC", "^DJI", "GC=F", "BZ=F", "CL=F", "EURUSD=X", "USDJPY=X", "GBPUSD=X", "^TNX", "^TYX"]
+
+    @st.cache_data(ttl=900)  # Cache valide 15 minutes
+    def get_all_market_prices(symbols_list):
+        data = yf.download(symbols_list, period="1d", group_by="ticker", progress=False)
+        return {
+            symbol: data[symbol]['Close'].iloc[-1] if symbol in data and not data[symbol].empty else None
+            for symbol in symbols_list
+        }
+
+    prices = get_all_market_prices(symbols)
+
     markets = {
         "📈 **Indices**": {
             "CAC 40": "^FCHI",
-            "Nasdaq": "^IXIC",
             "S&P 500": "^GSPC",
+            "Nasdaq": "^IXIC",
             "Dow Jones": "^DJI"
         },
         "🛢️ **Matières Premières**": {
@@ -124,16 +137,18 @@ if not ticker:
         for idx, (name, symbol) in enumerate(items.items()):
             with cols[idx]:
                 try:
-                    market_data = yf.Ticker(symbol)
-                    price = market_data.history(period="1d")['Close'].iloc[-1]
-                    display_text = f"{price:.2f}"
-                    if symbol == "^TYX":
-                        st.session_state["us10y_rate"] = float(price)
-                    st.markdown(f"""
-                    <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid #001f3f;">
-                        <strong>{name}</strong><br><span style="font-size: 18px;">{display_text}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    price = prices.get(symbol)
+                    if price is not None:
+                        display_text = f"{price:.2f}"
+                        if symbol == "^TYX":
+                            st.session_state["us10y_rate"] = float(price)
+                        st.markdown(f"""
+                        <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid #001f3f;">
+                            <strong>{name}</strong><br><span style="font-size: 18px;">{display_text}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.info(f"{name}: N/A")
                 except:
                     st.info(f"{name}: N/A")
         st.divider()
@@ -148,7 +163,7 @@ if not ticker:
                     st.markdown(f'<a href="{entry.link}" target="_blank">🔗 Lire l\'article</a>', unsafe_allow_html=True)
                     st.divider()
     except:
-        st.warning("Impossible de charger les actualités (vérifiez votre connexion).")
+        st.warning("Impossible de charger les actualités.")
 
 # 5. Affichage des données si ticker valide
 if ticker:
