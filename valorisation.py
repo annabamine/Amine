@@ -7,6 +7,7 @@ import pandas as pd
 from datetime import datetime
 import plotly.graph_objects as go
 import time
+import requests
 
 # 1. Configuration de base
 st.set_page_config(page_title="Value Quest", layout="centered")
@@ -53,20 +54,28 @@ if "ping" in st.query_params:
     st.stop()
 
 # ==========================================
+# GESTION DE LA SESSION HTTP (ANTI-BAN)
+# ==========================================
+session = requests.Session()
+session.headers.update({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+})
+
+# ==========================================
 # FONCTIONS OPTIMISÉES ET CACHÉES
 # ==========================================
 
 @st.cache_data(ttl=86400)
 def fetch_search_results(query):
     try:
-        return yf.Search(query, max_results=5).quotes
+        return yf.Search(query, max_results=5, session=session).quotes
     except:
         return []
 
 @st.cache_data(ttl=1800)  # Cache de 30 minutes pour éviter la saturation active
 def get_ticker_data(ticker):
     try:
-        t = yf.Ticker(ticker)
+        t = yf.Ticker(ticker, session=session)
         info = t.info
         
         # OPTIMISATION : 1 seul appel historique (5 ans). Le reste sera filtré en Python.
@@ -93,7 +102,7 @@ def get_popular_markets_data():
         for name, symbol in items.items():
             try:
                 # Utilisation de history(1d) plus léger que Ticker().info
-                tick = yf.Ticker(symbol)
+                tick = yf.Ticker(symbol, session=session)
                 price = tick.history(period="1d")['Close'].iloc[-1]
                 results[category][name] = float(price)
             except:
@@ -287,7 +296,7 @@ if ticker:
         horizon = st.number_input("Horizon (années)", value=5, step=1, key="horizon_tab3")
         per = st.number_input("PER futur", min_value=5.0, value=20.0, key="per_tab3")
         prix_futur = eps_actuel * ((1 + cagr / 100) ** horizon) * per
-        prix_juste = prix_futur / ((1 + rendement / 100) ** horizon)
+        prix_juste = prix_futur / ((1 + rendimiento / 100) ** horizon)
         if isinstance(prix, (float, int)) and prix > 0:
             if prix_juste >= prix:
                 st.success(f"**Prix juste** : {prix_juste:.2f} {devise} (✅ Bon point d'entrée)")
