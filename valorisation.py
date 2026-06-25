@@ -7,7 +7,6 @@ import pandas as pd
 from datetime import datetime
 import plotly.graph_objects as go
 import time
-import requests
 
 # 1. Configuration de base
 st.set_page_config(page_title="Value Quest", layout="centered")
@@ -53,65 +52,28 @@ if "ping" in st.query_params:
     st.write("Pong! App is alive.")
     st.stop()
 
-# ==========================================
-# GESTION DE LA SESSION HTTP (ANTI-BAN)
-# ==========================================
-session = requests.Session()
-session.headers.update({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-})
-
-# ==========================================
-# FONCTIONS OPTIMISÉES ET CACHÉES
-# ==========================================
-
+# 3. Fonctions optimisées (2 appels API MAX par ticker)
 @st.cache_data(ttl=86400)
 def fetch_search_results(query):
     try:
-        return yf.Search(query, max_results=5, session=session).quotes
+        return yf.Search(query, max_results=5).quotes
     except:
         return []
 
-@st.cache_data(ttl=1800)  # Cache de 30 minutes pour éviter la saturation active
+@st.cache_data(ttl=3600)
 def get_ticker_data(ticker):
     try:
-        t = yf.Ticker(ticker, session=session)
+        t = yf.Ticker(ticker)
         info = t.info
-        
-        # OPTIMISATION : 1 seul appel historique (5 ans). Le reste sera filtré en Python.
+        hist_ytd = t.history(period="ytd")
         hist_full = t.history(period="5y")
         dividends = t.dividends.tail(5) if not t.dividends.empty else None
-        
-        return {"info": info, "hist_full": hist_full, "dividends": dividends}
+        return {"info": info, "hist_ytd": hist_ytd, "hist_full": hist_full, "dividends": dividends}
     except Exception as e:
         st.error(f"Erreur avec {ticker}: {e}")
         return None
 
-@st.cache_data(ttl=900)  # Cache global de 15 min partagé pour les indices mondiaux
-def get_popular_markets_data():
-    markets = {
-        "📈 **Indices**": {"CAC 40": "^FCHI", "Nasdaq": "^IXIC", "S&P 500": "^GSPC", "Dow Jones": "^DJI"},
-        "🛢️ **Matières Premières**": {"Or": "GC=F", "Pétrole Brent": "BZ=F", "Pétrole WTI": "CL=F"},
-        "💱 **Devises**": {"EUR/USD": "EURUSD=X", "USD/JPY": "USDJPY=X", "GBP/USD": "GBPUSD=X"},
-        "💵 **Obligations US**": {"US 2y": "^TNX", "US 10y": "^TYX"}
-    }
-    
-    results = {}
-    for category, items in markets.items():
-        results[category] = {}
-        for name, symbol in items.items():
-            try:
-                # Utilisation de history(1d) plus léger que Ticker().info
-                tick = yf.Ticker(symbol, session=session)
-                price = tick.history(period="1d")['Close'].iloc[-1]
-                results[category][name] = float(price)
-            except:
-                results[category][name] = None
-    return results
-
-# ==========================================
-# RECHERCHE PRINCIPALE
-# ==========================================
+# 4. Recherche principale
 search_query = st.text_input("🔍 Rechercher une entreprise (nom ou ticker)", "", key="main_search_query")
 ticker = None
 if search_query and len(search_query) >= 3:
@@ -128,7 +90,7 @@ if search_query and len(search_query) >= 3:
 elif search_query and len(search_query) < 3:
     st.info("💡 Veuillez taper au moins 3 caractères pour lancer la recherche.")
 
-# Affichage des données si ticker valide
+# 5. Affichage des données si ticker valide
 if ticker:
     data = get_ticker_data(ticker)
     if not data:
@@ -136,9 +98,9 @@ if ticker:
         st.stop()
 
     infos = data["info"]
+    hist_ytd = data["hist_ytd"]
     hist_full = data["hist_full"]
     dividends = data["dividends"]
-    
     devise = infos.get("currencySymbol") or infos.get("currency") or ""
     prix = infos.get("currentPrice", 0)
     prev_close = infos.get("regularMarketPreviousClose")
@@ -146,17 +108,13 @@ if ticker:
     day_color = "green" if day_change >= 0 else "red"
     day_text = f"({day_change:+.2f}%)" if isinstance(day_change, (int, float)) else ""
 
-    # OPTIMISATION PYTHON : Calcul de la performance YTD directement sur l'historique existant
+    # YTD Performance
     ytd_text = "N/A YTD"
-    if not hist_full.empty:
+    if not hist_ytd.empty and len(hist_ytd) > 0:
         try:
-            current_year = datetime.now().year
-            # Filtrer les données de l'année en cours
-            df_ytd = hist_full[hist_full.index.year == current_year]
-            if not df_ytd.empty:
-                price_jan_1st = df_ytd['Close'].iloc[0]
-                ytd_change = ((prix - price_jan_1st) / price_jan_1st) * 100
-                ytd_text = f"{ytd_change:+.2f}% YTD"
+            price_jan_1st = hist_ytd['Close'].iloc[0]
+            ytd_change = ((prix - price_jan_1st) / price_jan_1st) * 100
+            ytd_text = f"{ytd_change:+.2f}% YTD"
         except:
             pass
 
@@ -296,12 +254,12 @@ if ticker:
         horizon = st.number_input("Horizon (années)", value=5, step=1, key="horizon_tab3")
         per = st.number_input("PER futur", min_value=5.0, value=20.0, key="per_tab3")
         prix_futur = eps_actuel * ((1 + cagr / 100) ** horizon) * per
-        prix_juste = prix_futur / ((1 + rendimiento / 100) ** horizon)
+        prix_juste = prix_futur / ((1 + rendimiento / 100) ** horizon) if 'rendimiento' in locals() else prix_futur / ((1 + rendement / 100) ** horizon)
         if isinstance(prix, (float, int)) and prix > 0:
             if prix_juste >= prix:
                 st.success(f"**Prix juste** : {prix_juste:.2f} {devise} (✅ Bon point d'entrée)")
             else:
-                st.error(f"**Prix juste** : {prix_juste:.2f} {devise} (⚠️ Surrévalué)")
+                st.error(f"**Prix juste** : {prix_juste:.2f} {devise} (⚠️ Surévalué)")
 
     with tab4:
         st.title("🎙️ Calendrier & Dividendes")
@@ -411,7 +369,7 @@ if ticker:
                         "Sector": i.get("sector", "N/A"),
                         "Dividend Yield": f"{i.get('dividendYield', 0):.2f} %" if i.get('dividendYield') else "N/A"
                     }
-                time.sleep(0.1) # Réduit le sleep inutile
+                time.sleep(0.5)
             if comparison_data:
                 st.dataframe(pd.DataFrame(comparison_data).T, use_container_width=True)
 
@@ -419,9 +377,15 @@ if ticker:
         st.title(f"📈 Graphique : {company_name}")
         period = st.selectbox("Période", ["1mo", "3mo", "6mo", "1y", "2y", "5y"], index=3)
 
-        period_days = {"1mo": 30, "3mo": 90, "6mo": 180, "1y": 365, "2y": 730, "5y": 1825}
+        period_days = {
+            "1mo": 30,
+            "3mo": 90,
+            "6mo": 180,
+            "1y": 365,
+            "2y": 730,
+            "5y": 1825
+        }
 
-        # OPTIMISATION PYTHON : Utilisation de tail() sur la dataframe de 5 ans déjà en cache
         try:
             df = hist_full.tail(period_days[period])
             if not df.empty:
@@ -449,25 +413,47 @@ if ticker:
 
     with tab8:
         st.title("🌍 Marchés Populaires")
-        
-        # OPTIMISATION : Appel unique de la fonction globale mis en cache
-        markets_data = get_popular_markets_data()
-        
-        for category, items in markets_data.items():
+        markets = {
+            "📈 **Indices**": {
+                "CAC 40": "^FCHI",
+                "Nasdaq": "^IXIC",
+                "S&P 500": "^GSPC",
+                "Dow Jones": "^DJI"
+            },
+            "🛢️ **Matières Premières**": {
+                "Or": "GC=F",
+                "Pétrole Brent": "BZ=F",
+                "Pétrole WTI": "CL=F"
+            },
+            "💱 **Devises**": {
+                "EUR/USD": "EURUSD=X",
+                "USD/JPY": "USDJPY=X",
+                "GBP/USD": "GBPUSD=X"
+            },
+            "💵 **Obligations US**": {
+                "US 2y": "^TNX",
+                "US 10y": "^TYX"
+            }
+        }
+        for category, items in markets.items():
             st.subheader(category)
             cols = st.columns(len(items))
-            for idx, (name, price) in enumerate(items.items()):
+            for idx, (name, symbol) in enumerate(items.items()):
                 with cols[idx]:
-                    if price is not None:
+                    try:
+                        market_data = yf.Ticker(symbol)
+                        price = market_data.history(period="1d")['Close'].iloc[-1]
+                        
                         display_text = f"{price:.2f}"
-                        if name == "US 10y":
-                            st.session_state["us10y_rate"] = price
+                        if symbol == "^TYX":
+                            st.session_state["us10y_rate"] = float(price)
+                            display_text = f"{price:.2f}"
 
                         st.markdown(f"""
                         <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid #001f3f;">
                             <strong>{name}</strong><br><span style="font-size: 18px;">{display_text}</span>
                         </div>
                         """, unsafe_allow_html=True)
-                    else:
+                    except:
                         st.info(f"{name}: N/A")
             st.divider()
