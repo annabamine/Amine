@@ -1,14 +1,12 @@
 import streamlit as st
 import yfinance as yf
-import matplotlib.pyplot as plt
 import feedparser
 import base64
 import pandas as pd
 from datetime import datetime
 import plotly.graph_objects as go
-import time
 
-# 1. Configuration de base
+# 1. Configuration de la page
 st.set_page_config(page_title="Value Quest", layout="centered")
 
 # 2. Barre de titre
@@ -16,7 +14,7 @@ def get_base64_image(image_path):
     try:
         with open(image_path, "rb") as img_file:
             return base64.b64encode(img_file.read()).decode()
-    except:
+    except (OSError, ValueError):
         return None
 
 logo_base64 = get_base64_image("logo.png")
@@ -39,11 +37,11 @@ st.markdown(f"""
         text-transform: uppercase; font-family: "Source Sans Pro", sans-serif; margin: 0;
     }}
     .stApp {{background-color: #fffdf4;}}
-    .stMainBlockContainer *:not(.nav-bar):not(.nav-title) {{color: black !important; font-size: 15px !important;}}
-    div[data-baseweb="select"] > div {{background-color: white !important;}}
-    div[data-baseweb="popover"] ul {{background-color: white !important;}}
-    div[data-baseweb="popover"] li {{background-color: white !important; color: black !important;}}
-    div.stNumberInput input, div.stTextInput input {{background-color: white !important; color: black !important; border: 1px solid gray !important;}}
+    .stMainBlockContainer *:not(.nav-bar):not(.nav-title), [data-testid="stMainBlockContainer"] *:not(.nav-bar):not(.nav-title) {{color: black !important; font-size: 15px !important;}}
+    div[data-baseweb="select"] > div, [data-testid="stSelectableBox"] {{background-color: white !important;}}
+    div[data-baseweb="popover"] ul, [data-baseweb="popover"] [role="listbox"] {{background-color: white !important;}}
+    div[data-baseweb="popover"] li, [data-baseweb="popover"] [role="option"] {{background-color: white !important; color: black !important;}}
+    div.stNumberInput input, div[data-testid="stNumberInput"] input, div.stTextInput input, div[data-testid="stTextInput"] input {{background-color: white !important; color: black !important; border: 1px solid gray !important;}}
 </style>
 <div class="nav-bar">{logo_html}<span class="nav-title">VALUE QUEST</span></div>
 """, unsafe_allow_html=True)
@@ -57,7 +55,7 @@ if "ping" in st.query_params:
 def fetch_search_results(query):
     try:
         return yf.Search(query, max_results=5).quotes
-    except:
+    except Exception:
         return []
 
 @st.cache_data(ttl=3600)
@@ -69,8 +67,17 @@ def get_ticker_data(ticker):
         hist_full = t.history(period="5y")
         dividends = t.dividends.tail(5) if not t.dividends.empty else None
         return {"info": info, "hist_ytd": hist_ytd, "hist_full": hist_full, "dividends": dividends}
-    except Exception as e:
-        st.error(f"Erreur avec {ticker}: {e}")
+    except Exception:
+        return None
+
+@st.cache_data(ttl=300)
+def get_market_price(symbol):
+    try:
+        df = yf.Ticker(symbol).history(period="1d")
+        if df.empty:
+            return None
+        return float(df["Close"].iloc[-1])
+    except Exception:
         return None
 
 # 4. Recherche principale
@@ -85,7 +92,7 @@ if search_query and len(search_query) >= 3:
             ticker = selected.split(" - ")[0]
         else:
             st.warning(f"Aucun résultat pour '{search_query}'")
-    except:
+    except Exception:
         ticker = search_query.upper()
 elif search_query and len(search_query) < 3:
     st.info("💡 Veuillez taper au moins 3 caractères pour lancer la recherche.")
@@ -102,7 +109,7 @@ if ticker:
     hist_full = data["hist_full"]
     dividends = data["dividends"]
     devise = infos.get("currencySymbol") or infos.get("currency") or ""
-    prix = infos.get("currentPrice", 0)
+    prix = infos.get("currentPrice") or 0
     prev_close = infos.get("regularMarketPreviousClose")
     day_change = ((prix - prev_close) / prev_close) * 100 if isinstance(prix, (int, float)) and prev_close else 0
     day_color = "green" if day_change >= 0 else "red"
@@ -115,7 +122,7 @@ if ticker:
             price_jan_1st = hist_ytd['Close'].iloc[0]
             ytd_change = ((prix - price_jan_1st) / price_jan_1st) * 100
             ytd_text = f"{ytd_change:+.2f}% YTD"
-        except:
+        except Exception:
             pass
 
     # Affichage entreprise
@@ -126,7 +133,7 @@ if ticker:
         domain = website.replace('https://', '').replace('http://', '').replace('www.', '').rstrip('/')
         try:
             st.image(f"https://logos-api.apistemic.com/domain:{domain}", width=40)
-        except:
+        except Exception:
             st.write("Logo non disponible")
     else:
         st.write("Pas de site web ou logo disponible")
@@ -135,16 +142,18 @@ if ticker:
         st.write(infos.get("longBusinessSummary", "Résumé non disponible"))
 
     # Prix actuel
-    market_state = infos.get("marketState", "").upper()
-    is_market_closed = market_state in ["POST", "PRE"] or (datetime.now().hour >= 22)
+    market_state = (infos.get("marketState") or "").upper()
+    # marketState Yahoo est fiable ; heure locale uniquement en secours s'il est absent
+    is_market_closed = (market_state in ["POST", "PRE"] or
+                        (not market_state and datetime.now().hour >= 22))
     post_market_price = infos.get("postMarketPrice") or infos.get("afterHoursPrice")
     pre_market_price = infos.get("preMarketPrice")
 
     if is_market_closed:
-        if post_market_price:
+        if post_market_price and prev_close:
             display_price, price_label = post_market_price, "Prix After-Hours"
             price_change = ((post_market_price - prev_close) / prev_close) * 100
-        elif pre_market_price:
+        elif pre_market_price and prev_close:
             display_price, price_label = pre_market_price, "Prix Pre-Market"
             price_change = ((pre_market_price - prev_close) / prev_close) * 100
         else:
@@ -234,8 +243,8 @@ if ticker:
     with tab2:
         st.title("📊 Valorisation")
         horizon = st.number_input("Horizon (années)", min_value=1, max_value=30, value=5)
-        cagr_eps = st.number_input("CAGR EPS estimé (%)", min_value=-100.0, value=12.0)
-        eps_actuel = infos.get("trailingEps", 0.01)
+        cagr_eps = st.number_input("CAGR EPS estimé (%)", min_value=-99.0, value=12.0)
+        eps_actuel = infos.get("trailingEps") or 0.01
         eps_futur = eps_actuel * ((1 + cagr_eps / 100) ** horizon)
         per_futur = st.number_input(f"PER dans {horizon} ans", min_value=5.0, value=20.0)
         prix_cible = eps_futur * per_futur
@@ -249,12 +258,12 @@ if ticker:
 
     with tab3:
         st.title("💰 Prix d'entrée juste")
-        cagr = st.number_input("Croissance EPS (%)", value=cagr_eps, key="cagr_tab3")
-        rendement = st.number_input("Rendement attendu (%)", value=10.0)
-        horizon = st.number_input("Horizon (années)", value=5, step=1, key="horizon_tab3")
+        cagr = st.number_input("Croissance EPS (%)", min_value=-99.0, value=cagr_eps, key="cagr_tab3")
+        rendement = st.number_input("Rendement attendu (%)", min_value=0.0, value=10.0)
+        horizon = st.number_input("Horizon (années)", min_value=1, max_value=30, value=5, step=1, key="horizon_tab3")
         per = st.number_input("PER futur", min_value=5.0, value=20.0, key="per_tab3")
         prix_futur = eps_actuel * ((1 + cagr / 100) ** horizon) * per
-        prix_juste = prix_futur / ((1 + rendimiento / 100) ** horizon) if 'rendimiento' in locals() else prix_futur / ((1 + rendement / 100) ** horizon)
+        prix_juste = prix_futur / ((1 + rendement / 100) ** horizon)
         if isinstance(prix, (float, int)) and prix > 0:
             if prix_juste >= prix:
                 st.success(f"**Prix juste** : {prix_juste:.2f} {devise} (✅ Bon point d'entrée)")
@@ -311,7 +320,7 @@ if ticker:
                         st.divider()
             else:
                 st.info("Aucune actualité trouvée.")
-        except:
+        except Exception:
             st.error("Impossible de charger les actualités.")
 
     with tab6:
@@ -369,9 +378,8 @@ if ticker:
                         "Sector": i.get("sector", "N/A"),
                         "Dividend Yield": f"{i.get('dividendYield', 0):.2f} %" if i.get('dividendYield') else "N/A"
                     }
-                time.sleep(0.5)
             if comparison_data:
-                st.dataframe(pd.DataFrame(comparison_data).T, use_container_width=True)
+                st.dataframe(pd.DataFrame(comparison_data).T, width="stretch")
 
     with tab7:
         st.title(f"📈 Graphique : {company_name}")
@@ -405,7 +413,7 @@ if ticker:
                     xaxis_rangeslider_visible=True,
                     hovermode="x unified"
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             else:
                 st.warning("Aucune donnée historique.")
         except Exception as e:
@@ -431,8 +439,8 @@ if ticker:
                 "GBP/USD": "GBPUSD=X"
             },
             "💵 **Obligations US**": {
-                "US 2y": "^TNX",
-                "US 10y": "^TYX"
+                "US 2y": "^TYX",
+                "US 10y": "^TNX"
             }
         }
         for category, items in markets.items():
@@ -440,20 +448,13 @@ if ticker:
             cols = st.columns(len(items))
             for idx, (name, symbol) in enumerate(items.items()):
                 with cols[idx]:
-                    try:
-                        market_data = yf.Ticker(symbol)
-                        price = market_data.history(period="1d")['Close'].iloc[-1]
-                        
-                        display_text = f"{price:.2f}"
-                        if symbol == "^TYX":
-                            st.session_state["us10y_rate"] = float(price)
-                            display_text = f"{price:.2f}"
-
+                    price = get_market_price(symbol)
+                    if price is None:
+                        st.info(f"{name}: N/A")
+                    else:
                         st.markdown(f"""
                         <div style="background-color: #f0f2f6; padding: 10px; border-radius: 8px; border-left: 4px solid #001f3f;">
-                            <strong>{name}</strong><br><span style="font-size: 18px;">{display_text}</span>
+                            <strong>{name}</strong><br><span style="font-size: 18px;">{price:.2f}</span>
                         </div>
                         """, unsafe_allow_html=True)
-                    except:
-                        st.info(f"{name}: N/A")
             st.divider()

@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Syste
+.DS_Store
+
+# Lourd / non source
+*.apk
+*.png
+*.ico
+
+# Cles et secrets
+*KEY*.txt
+*.env
